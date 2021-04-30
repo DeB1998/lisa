@@ -1,0 +1,32 @@
+class test1 {
+    /*test1() {
+        def a = new int[5];
+        //def b = new int[3][3];
+
+        //def c = b[1][1];
+    }*/
+    
+    test2() {
+       // def z = 9;
+        def y = 0;
+        def x = y;
+        x = -3;
+        
+        
+        x = y;
+/*        x = y + z;
+        x = 2*y;
+        x = 2*y+2*z;
+        x = y+y;
+        x = 3*y - y;
+        x = y + 2*y + 3*z + 9 + y + 5+ z -y - 2*z + 7 + z;
+        x = 3*y + 3*z + 21;
+        x = 2*y + 2*z + 3;
+        x = 2 * (y+z) + 3;
+        x = 2 * (y+z) - 5;
+        
+        
+        x = 2* + 2* y;
+        x = 2*(x+y);*/
+    }
+}

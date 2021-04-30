@@ -1,17 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN" name="DefaultLoggingConf">
-	<Appenders>
-		<Console name="console">
-			<PatternLayout pattern="%d %5level %c - %m %ex%n"/>
-		</Console>
-	</Appenders>
+    <Appenders>
+        <Console name="console">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} ---
+%highlight{[%5level]}{FATAL=red, ERROR=red, WARN=yellow, INFO=green, DEBUG=blue, TRACE=default}
+%style{%-40.40c{40}}{cyan}
+:
+%highlight{%m %ex%n}{FATAL=red, ERROR=red, WARN=yellow, INFO=default, DEBUG=default, TRACE=default}"
+            />
+        </Console>
+    </Appenders>
 
-	<Loggers>
-		<Logger name="it.unive.lisa" level="DEBUG" />
-		<Logger name="org.reflections" level="WARN" />
-		
-		<Root level="DEBUG">
-			<AppenderRef ref="console" level="DEBUG"/>
-		</Root>
-	</Loggers>
+    <Loggers>
+        <Logger name="it.unive.lisa" level="TRACE"/>
+        <Logger name="org.reflections" level="WARN"/>
+
+        <Root level="DEBUG">
+            <AppenderRef ref="console" level="DEBUG"/>
+        </Root>
+    </Loggers>
 </Configuration>
