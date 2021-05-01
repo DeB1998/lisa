@@ -6,7 +6,7 @@ import it.unive.lisa.LiSAConfiguration;
 import it.unive.lisa.LiSAFactory;
 import it.unive.lisa.analysis.AbstractState;
 import it.unive.lisa.analysis.heap.HeapDomain;
-import it.unive.lisa.analysis.nonrelational.value.StripesDomain;
+import it.unive.lisa.analysis.nonrelational.value.stripes.StripesDomain;
 import it.unive.lisa.imp.IMPFrontend;
 import it.unive.lisa.imp.ParsingException;
 import org.junit.Test;
