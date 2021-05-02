@@ -1,9 +1,10 @@
 package it.unive.lisa.analysis.nonrelational.value.stripes;
 
-import it.unive.lisa.symbolic.value.Identifier;
-import java.util.Objects;
+import it.unive.lisa.symbolic.value.Variable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
 
 /**
  * Description.
@@ -15,18 +16,18 @@ import org.jetbrains.annotations.Nullable;
 final class Constraint {
 
     @NotNull
-    private final Identifier x;
+    private final Variable x;
 
     @Nullable
-    private final Identifier y;
+    private final Variable y;
 
     private final int k1;
 
     private final int k2;
 
     Constraint(
-        @NotNull final Identifier x,
-        @Nullable final Identifier y,
+        @NotNull final Variable x,
+        @Nullable final Variable y,
         final int k1,
         final int k2
     ) {
@@ -38,12 +39,12 @@ final class Constraint {
     }
 
     @NotNull
-    Identifier getX() {
+    Variable getX() {
         return this.x;
     }
 
     @Nullable
-    Identifier getY() {
+    Variable getY() {
         return this.y;
     }
 

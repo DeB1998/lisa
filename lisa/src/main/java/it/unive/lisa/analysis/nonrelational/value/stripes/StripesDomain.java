@@ -35,27 +35,36 @@ public class StripesDomain
     extends BaseLattice<StripesDomain>
     implements ValueDomain<StripesDomain> {
 
-    private static final StripesDomain TOP = new StripesDomain();
+    private static final StripesDomain TOP = new StripesDomain(false);
 
-    private static final StripesDomain BOTTOM = new StripesDomain();
+    private static final StripesDomain BOTTOM = new StripesDomain(true);
+
+    private boolean isBottom;
 
     @NotNull
     @Unmodifiable
-    private final Map<@NotNull Variable, @Unmodifiable @NotNull Set<Constraint>> domainElements;
+    private final Map<@NotNull Variable, @Unmodifiable @NotNull Set<@NotNull Constraint>> domainElements;
 
     private StripesDomain(
-        @NotNull final Map<@NotNull Variable, @NotNull Set<Constraint>> domainElements
+        @Unmodifiable @NotNull final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> domainElements
     ) {
         this.domainElements = domainElements;
+        this.isBottom = false;
+    }
+
+    private StripesDomain(boolean isBottom) {
+        this();
+        this.isBottom = isBottom;
     }
 
     public StripesDomain() {
         this.domainElements = new HashMap<>();
+        this.isBottom = false;
     }
 
     @Override
     public boolean isTop() {
-        return this.domainElements.isEmpty();
+        return this.domainElements.isEmpty() && !this.isBottom;
     }
 
     @Override
@@ -66,25 +75,31 @@ public class StripesDomain
     // isBottom mancante: NON è una svista
 
     @Override
+    public boolean isBottom() {
+        return this.domainElements.isEmpty() && this.isBottom;
+    }
+
+    @Override
     public StripesDomain bottom() {
         return StripesDomain.BOTTOM;
     }
 
     @Override
-    protected StripesDomain lubAux(final StripesDomain other) throws SemanticException { // [z -> {(y, x, 20, 4), (y, /, 0, 14)}]
-        final Map<Variable, Set<Constraint>> newDomainElements = new HashMap<>();
+    protected StripesDomain lubAux(final StripesDomain other) throws SemanticException { // [z ->
+        // {(y, x, 20, 4), (y, /, 0, 14)}]
+        final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newDomainElements = new HashMap<>();
 
-        for (final Entry<Variable, Set<Constraint>> element : this.domainElements.entrySet()) {
+        for (final Entry<@NotNull Variable, @NotNull Set<@NotNull Constraint>> element : this.domainElements.entrySet()) {
             // element = [z -> {(y, x, 20, 4)}]
-            final Set<Constraint> elementConstraints = element.getValue();
+            final Set<@NotNull Constraint> elementConstraints = element.getValue();
             @Nullable
-            final Set<Constraint> otherElementConstraints = other.domainElements.get(
+            final Set<@NotNull Constraint> otherElementConstraints = other.domainElements.get(
                 element.getKey()
             );
 
             // otherElementConstraints = {(y, x, 20, 4), (y, /, 0, 14)}
             if (otherElementConstraints != null) {
-                final Set<Constraint> newConstraints = new HashSet<>();
+                final Set<@NotNull Constraint> newConstraints = new HashSet<>();
                 for (final Constraint c : elementConstraints) {
                     for (final Constraint otherC : otherElementConstraints) {
                         if (c.isSameConstraint(otherC)) {
@@ -93,13 +108,16 @@ public class StripesDomain
                             } else {
                                 newConstraints.add(otherC);
                             }
+                            break;
                         }
                     }
                 }
-                newDomainElements.put(
-                    element.getKey(),
-                    Collections.unmodifiableSet(newConstraints)
-                );
+                if (!newConstraints.isEmpty()) {
+                    newDomainElements.put(
+                        element.getKey(),
+                        Collections.unmodifiableSet(newConstraints)
+                    );
+                }
             }
         }
 
@@ -111,13 +129,13 @@ public class StripesDomain
 
     @Override
     protected StripesDomain wideningAux(final StripesDomain other) throws SemanticException {
-        final Map<Variable, Set<Constraint>> newDomainElements = new HashMap<>();
+        final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newDomainElements = new HashMap<>();
 
-        for (final Entry<Variable, Set<Constraint>> element : this.domainElements.entrySet()) {
+        for (final Entry<@NotNull Variable, @NotNull Set<@NotNull Constraint>> element : this.domainElements.entrySet()) {
             // element = [z -> {(y, x, 20, 4)}]
-            final Set<Constraint> elementConstraints = element.getValue();
+            final Set<@NotNull Constraint> elementConstraints = element.getValue();
             @Nullable
-            final Set<Constraint> otherElementConstraints = other.domainElements.get(
+            final Set<@NotNull Constraint> otherElementConstraints = other.domainElements.get(
                 element.getKey()
             );
             if (otherElementConstraints != null) {
@@ -137,25 +155,32 @@ public class StripesDomain
     }
 
     // this <= other
-    // s1 <= other
     @Override
     protected boolean lessOrEqualAux(final StripesDomain other) throws SemanticException {
-        for (final Entry<Variable, Set<Constraint>> otherElements : other.domainElements.entrySet()) {
-            final Set<Constraint> otherConstraints = otherElements.getValue();
+        for (final Entry<@NotNull Variable, @NotNull Set<@NotNull Constraint>> otherElements : other.domainElements.entrySet()) {
+            final Set<@NotNull Constraint> otherConstraints = otherElements.getValue();
             @Nullable
-            final Set<Constraint> elementConstraints =
+            final Set<@NotNull Constraint> elementConstraints =
                 this.domainElements.get(otherElements.getKey());
-            if (elementConstraints != null) { // this.domainElements.containsKey(otherElements.getKey())
-                for (final Constraint c : otherConstraints) {
+
+            if (elementConstraints != null) { // this.domainElements.containsKey(otherElements
+                // .getKey())
+                for (final Constraint otherConstraint : otherConstraints) {
                     if (
                         elementConstraints
                             .stream()
-                            .noneMatch(e -> e.isSameConstraint(c) && (c.getK2() <= e.getK2()))
+                            .noneMatch(
+                                thisConstraint ->
+                                    thisConstraint.isSameConstraint(otherConstraint) &&
+                                    (otherConstraint.getK2() <= thisConstraint.getK2())
+                            )
                     ) {
                         return false;
                     }
                     break;
                 }
+            } else {
+                return false;
             }
         }
         return true;
@@ -169,7 +194,7 @@ public class StripesDomain
         final ProgramPoint pp
     ) throws SemanticException {
         if ((pp instanceof Assignment) && (id instanceof Variable variable)) {
-            final Map<@NotNull Variable, @NotNull Set<Constraint>> newDomainElements =
+            final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newDomainElements =
                 this.drop(variable);
 
             final SimplificationResult simplificationResult = Simplifier.simplify(expression);
@@ -191,8 +216,8 @@ public class StripesDomain
                     !id.equals(secondIdentifier)
                 ) {
                     // assign x = y
-                    final Set<Constraint> oldConstraints = newDomainElements.get(id);
-                    final Set<Constraint> newConstraints = (oldConstraints == null)
+                    final Set<@NotNull Constraint> oldConstraints = newDomainElements.get(id);
+                    final Set<@NotNull Constraint> newConstraints = (oldConstraints == null)
                         ? new HashSet<>()
                         : new HashSet<>(oldConstraints);
 
@@ -218,14 +243,15 @@ public class StripesDomain
     }
 
     @NotNull
-    private Map<Variable, Set<Constraint>> drop(final Variable id) {
-        final Map<Variable, Set<Constraint>> newDomainElements = new HashMap<>();
-        final Predicate<Constraint> constraintFilter = constraint ->
+    private Map<@NotNull Variable, Set<@NotNull Constraint>> drop(final Variable id) {
+        final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newDomainElements = new HashMap<>();
+        final Predicate<@NotNull Constraint> constraintFilter = constraint ->
             !constraint.getX().equals(id) && !id.equals(constraint.getY());
-        final Collector<Constraint, ?, Set<Constraint>> collector = Collectors.toSet();
+        final Collector<@NotNull Constraint, ?, @NotNull Set<Constraint>> collector = Collectors.toSet();
 
-        for (final Entry<Variable, Set<Constraint>> element : this.domainElements.entrySet()) {
-            if (!element.getKey().equals(id) && (element.getValue() != null)) { // Drops the constraints associated to the assigned variable
+        for (final Entry<@NotNull Variable, @NotNull Set<@NotNull Constraint>> element : this.domainElements.entrySet()) {
+            if (!element.getKey().equals(id)) { // Drops the constraints associated to the
+                // assigned variable
                 final Set<Constraint> newConstraints = element
                     .getValue()
                     .stream()
@@ -248,9 +274,17 @@ public class StripesDomain
 
     @Override
     public StripesDomain forgetIdentifier(final Identifier id) throws SemanticException {
-        //this.
+        if (id instanceof Variable variable) {
+            Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newDomainElements = new HashMap<>(
+                this.domainElements
+            );
 
-        return this; //TODO:
+            newDomainElements.remove(variable);
+
+            return new StripesDomain(Collections.unmodifiableMap(newDomainElements));
+        }
+
+        return this;
     }
 
     @Override
@@ -310,20 +344,16 @@ public class StripesDomain
 
         // [z -> {(y, x, 20, 4), (y, /, 0, 14)}, y -> {(x, z, 3, 1)}]
 
-        for (final Entry<Identifier, Set<Constraint>> otherElements : this.domainElements.entrySet()) {
+        for (final Entry<@NotNull Variable, @NotNull Set<@NotNull Constraint>> otherElements : this.domainElements.entrySet()) {
             builder.append(otherElements.getKey()).append(" → {");
 
-            if (otherElements.getValue() == null) {
-                builder.delete(builder.length() - 2, builder.length()).append(" ⊤, ");
-            } else {
-                for (final Constraint constraints : otherElements.getValue()) {
-                    builder.append(constraints.toString()).append(", ");
-                }
-                if (!otherElements.getValue().isEmpty()) {
-                    builder.delete(builder.length() - 2, builder.length());
-                }
-                builder.append("}, ");
+            for (final Constraint constraints : otherElements.getValue()) {
+                builder.append(constraints.toString()).append(", ");
             }
+            if (!otherElements.getValue().isEmpty()) {
+                builder.delete(builder.length() - 2, builder.length());
+            }
+            builder.append("}, ");
         }
 
         if (builder.length() > 1) {
