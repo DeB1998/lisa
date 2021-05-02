@@ -247,6 +247,9 @@ public class StripesDomain
         final ProgramPoint pp
     ) throws SemanticException {
         if (pp instanceof Assignment) {
+            final SimplificationResult simplificationResult = Simplifier.simplify(expression);
+            
+            
             if (expression instanceof Identifier) {
                 final Map<Identifier, Set<Constraint>> newDomainElements = new HashMap<>();
                 for (final Entry<Identifier, Set<Constraint>> element : this.domainElements.entrySet()) {
@@ -276,8 +279,8 @@ public class StripesDomain
                 newDomainElements.put(id, Collections.unmodifiableSet(newConstraints));
                 return new StripesDomain(newDomainElements);
             } else if (expression instanceof BinaryExpression){
-                Identifier[] identifiers = new Identifier[]{null, null};
-                int[] constants = new int[]{0, 0, 0};
+                final Identifier[] identifiers = new Identifier[]{null, null};
+                final int[] constants = new int[]{0, 0, 0};
                 normalize(expression,identifiers, constants);
             }
             
@@ -285,8 +288,9 @@ public class StripesDomain
         return StripesDomain.TOP;
     }
 
-    private static void boh(ValueExpression expression) {
-        rec(expression);
+    private static void boh(final ValueExpression expression) {
+    
+        StripesDomain.rec(expression);
     }
     
     /*private static final class Pair<A, B> {
@@ -335,7 +339,7 @@ public class StripesDomain
     }
     */
     
-    private static class NormalizationResult {
+    /*private static class NormalizationResult {
     
         private final Identifier[] identifiers;
         private final int[] constants;
@@ -451,7 +455,7 @@ public class StripesDomain
     // "x + y + 3 + 5*x + 10*x + 10*y"
     // "16x + 11y + 3"
     
-    private static Map<Identifier, Integer> rec(ValueExpression expression) {
+    private static Map<Identifier, Integer> rec(final ValueExpression expression) {
         
         // x = y
         // x = -y
@@ -460,7 +464,7 @@ public class StripesDomain
         // x = 3 * y
         
         int k2;
-        Map<Identifier, Integer> m = new HashMap<>();
+        final Map<Identifier, Integer> m = new HashMap<>();
         
         if (expression instanceof Identifier id) {
             m.put(id, 1);
