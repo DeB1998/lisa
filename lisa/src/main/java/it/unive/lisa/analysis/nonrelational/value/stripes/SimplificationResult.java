@@ -1,6 +1,7 @@
 package it.unive.lisa.analysis.nonrelational.value.stripes;
 
 import it.unive.lisa.symbolic.value.Identifier;
+import it.unive.lisa.symbolic.value.Variable;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -13,20 +14,20 @@ import org.jetbrains.annotations.Nullable;
 public class SimplificationResult {
 
     @Nullable
-    private Identifier firstIdentifier;
+    private Variable firstIdentifier;
 
     private int firstIdentifierCount;
 
     @Nullable
-    private Identifier secondIdentifier;
+    private Variable secondIdentifier;
 
     private int secondIdentifierCount;
     private int constant;
 
     public SimplificationResult(
-        @Nullable final Identifier firstIdentifier,
+        @Nullable final Variable firstIdentifier,
         final int firstIdentifierCount,
-        @Nullable final Identifier secondIdentifier,
+        @Nullable final Variable secondIdentifier,
         final int secondIdentifierCount,
         final int constant
     ) {
@@ -41,11 +42,11 @@ public class SimplificationResult {
         this(null, 0, null, 0, constant);
     }
 
-    public @Nullable Identifier getFirstIdentifier() {
+    public @Nullable Variable getFirstIdentifier() {
         return this.firstIdentifier;
     }
 
-    public void setFirstIdentifier(final @Nullable Identifier firstIdentifier) {
+    public void setFirstIdentifier(final @Nullable Variable firstIdentifier) {
         this.firstIdentifier = firstIdentifier;
     }
 
@@ -57,11 +58,11 @@ public class SimplificationResult {
         this.firstIdentifierCount = firstIdentifierCount;
     }
 
-    public @Nullable Identifier getSecondIdentifier() {
+    public @Nullable Variable getSecondIdentifier() {
         return this.secondIdentifier;
     }
 
-    public void setSecondIdentifier(final @Nullable Identifier secondIdentifier) {
+    public void setSecondIdentifier(final @Nullable Variable secondIdentifier) {
         this.secondIdentifier = secondIdentifier;
     }
 

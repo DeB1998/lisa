@@ -1,10 +1,11 @@
 class test1 {
     /*test1() {
         def a = new int[5];
-        //def b = new int[3][3];
-
-        //def c = b[1][1];
-    }*/
+        def b = new int[3][3];
+        def c = b[1][1];
+    }
+    
+    testField;
     
     test2() {
         def z = 9;
@@ -30,7 +31,7 @@ class test1 {
         
         x = 2*x + 2* y;
         x = 2*(x+y);
-    }
+    }*/
     
     /*test3() {
         def y = 0;

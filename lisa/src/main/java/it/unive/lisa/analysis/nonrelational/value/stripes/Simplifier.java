@@ -4,9 +4,9 @@ import it.unive.lisa.symbolic.SymbolicExpression;
 import it.unive.lisa.symbolic.value.BinaryExpression;
 import it.unive.lisa.symbolic.value.BinaryOperator;
 import it.unive.lisa.symbolic.value.Constant;
-import it.unive.lisa.symbolic.value.Identifier;
 import it.unive.lisa.symbolic.value.UnaryExpression;
 import it.unive.lisa.symbolic.value.UnaryOperator;
+import it.unive.lisa.symbolic.value.Variable;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -30,8 +30,8 @@ final class Simplifier {
                 (constant.getValue() instanceof Integer value)) {
             return new SimplificationResult(value);
         }
-        if (expression instanceof Identifier identifier) {
-            return new SimplificationResult(identifier, 1, null, 0, 0);
+        if (expression instanceof Variable variable) {
+            return new SimplificationResult(variable, 1, null, 0, 0);
         }
         if ((expression instanceof UnaryExpression unaryExpression) &&
                 (unaryExpression.getOperator() == UnaryOperator.NUMERIC_NEG)) {
@@ -51,15 +51,15 @@ final class Simplifier {
             final SimplificationResult right = Simplifier.simplify(binaryExpression.getRight());
 
             if ((left != null) && (right != null)) {
-                final Identifier leftFirstIdentifier = left.getFirstIdentifier();
+                final Variable leftFirstIdentifier = left.getFirstIdentifier();
                 final int leftFirstCount = left.getFirstIdentifierCount();
-                final Identifier leftSecondIdentifier = left.getSecondIdentifier();
+                final Variable leftSecondIdentifier = left.getSecondIdentifier();
                 final int leftSecondCount = left.getSecondIdentifierCount();
                 final int leftConstant = left.getConstant();
 
-                final Identifier rightFirstIdentifier = right.getFirstIdentifier();
+                final Variable rightFirstIdentifier = right.getFirstIdentifier();
                 final int rightFirstCount = right.getFirstIdentifierCount();
-                final Identifier rightSecondIdentifier = right.getSecondIdentifier();
+                final Variable rightSecondIdentifier = right.getSecondIdentifier();
                 final int rightSecondCount = right.getSecondIdentifierCount();
                 final int rightConstant = right.getConstant();
 
@@ -115,14 +115,14 @@ final class Simplifier {
         final BinaryExpression binaryExpression,
         final SimplificationResult left,
         final SimplificationResult right,
-        final Identifier leftFirstIdentifier,
+        final Variable leftFirstIdentifier,
         final int leftFirstCount,
-        final Identifier leftSecondIdentifier,
+        final Variable leftSecondIdentifier,
         final int leftSecondCount,
         final int leftConstant,
-        final Identifier rightFirstIdentifier,
+        final Variable rightFirstIdentifier,
         int rightFirstCount,
-        final Identifier rightSecondIdentifier,
+        final Variable rightSecondIdentifier,
         int rightSecondCount,
         int rightConstant
     ) {
@@ -193,11 +193,11 @@ final class Simplifier {
     private static SimplificationResult handleMultiplication(
         final SimplificationResult left,
         final SimplificationResult right,
-        final Identifier leftFirstIdentifier,
+        final Variable leftFirstIdentifier,
         final int leftFirstCount,
         final int leftSecondCount,
         final int leftConstant,
-        final Identifier rightFirstIdentifier,
+        final Variable rightFirstIdentifier,
         final int rightFirstCount,
         final int rightSecondCount,
         final int rightConstant
@@ -238,8 +238,8 @@ final class Simplifier {
         final int leftFirstCount,
         final int leftSecondCount,
         final int leftConstant,
-        final Identifier rightFirstIdentifier,
-        final Identifier rightSecondIdentifier,
+        final Variable rightFirstIdentifier,
+        final Variable rightSecondIdentifier,
         final int rightConstant
     ) {
         final boolean isDivision = binaryExpression.getOperator() == BinaryOperator.NUMERIC_DIV;

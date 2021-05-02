@@ -34,6 +34,7 @@ public class StripesDomainTest {
                         new StripesDomain()
                 )
         );
+        conf.setInferTypes(true);
         
         LiSA lisa = new LiSA(conf);
         lisa.run(IMPFrontend.processFile("imp-testcases/stripes/test1.imp"));
