@@ -18,7 +18,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-
+import java.util.function.Predicate;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -41,7 +43,7 @@ public class StripesDomain
 
     @NotNull
     @Unmodifiable
-    private final Map<Identifier, @Unmodifiable Set<Constraint>> domainElements;
+    private final Map<Identifier, @Unmodifiable @NotNull Set<Constraint>> domainElements;
 
     private StripesDomain(@NotNull final Map<Identifier, Set<Constraint>> domainElements) {
         this.domainElements = domainElements;
@@ -50,12 +52,20 @@ public class StripesDomain
     public StripesDomain() {
         this.domainElements = new HashMap<>();
     }
-
+    
+    @Override
+    public boolean isTop() {
+        
+        return this.domainElements.isEmpty();
+    }
+    
     @Override
     public StripesDomain top() {
         return StripesDomain.TOP;
     }
-
+    
+    // isBottom mancante: NON è una svista
+    
     @Override
     public StripesDomain bottom() {
         return StripesDomain.BOTTOM;
@@ -247,52 +257,86 @@ public class StripesDomain
         final ProgramPoint pp
     ) throws SemanticException {
         if (pp instanceof Assignment) {
+            final Map<Identifier, @Nullable Set<Constraint>> newDomainElements = this.drop(id);
+
             final SimplificationResult simplificationResult = Simplifier.simplify(expression);
-            
-            
-            if (expression instanceof Identifier) {
-                final Map<Identifier, Set<Constraint>> newDomainElements = new HashMap<>();
-                for (final Entry<Identifier, Set<Constraint>> element : this.domainElements.entrySet()) {
-                    if (!element.getKey().equals(id)) { // Drops the constraints assiciated to the assigned variable
-                        final Set<Constraint> newConstraints = new HashSet<>();
-                        for (final Constraint constraint : element.getValue()) {
-                            if (!constraint.getX().equals(id) && !id.equals(constraint.getY())) {
-                                newConstraints.add(constraint);
-                            }
-                        }
-                        if (!newConstraints.isEmpty()) {
-                            newDomainElements.put(
-                                element.getKey(),
-                                Collections.unmodifiableSet(newConstraints)
-                            );
-                        }
-                    }
+
+            if (simplificationResult != null) {
+                final Identifier firstIdentifier = simplificationResult.getFirstIdentifier();
+                final int firstIdentifierCount = simplificationResult.getFirstIdentifierCount();
+                final Identifier secondIdentifier = simplificationResult.getSecondIdentifier();
+                final int secondIdentifierCount = simplificationResult.getSecondIdentifierCount();
+                final int constant = simplificationResult.getConstant();
+                if (
+                    (firstIdentifier != null) &&
+                    (
+                        (secondIdentifier == null) ||
+                        (firstIdentifierCount == secondIdentifierCount)
+                    ) &&
+                    !id.equals(firstIdentifier) &&
+                    !id.equals(secondIdentifier)
+                ) {
+                    // assign x = y
+                    final Set<Constraint> oldConstraints = newDomainElements.get(id);
+                    final Set<Constraint> newConstraints = (oldConstraints == null)
+                        ? new HashSet<>()
+                        : new HashSet<>(oldConstraints);
+
+                    newConstraints.add(
+                        new Constraint(
+                            firstIdentifier,
+                            secondIdentifier,
+                            firstIdentifierCount,
+                            constant - 1
+                        )
+                    );
+
+                    newDomainElements.put(id, Collections.unmodifiableSet(newConstraints));
+                    return new StripesDomain(newDomainElements);
                 }
-                // assign x = y
-                final Set<Constraint> oldConstraints = newDomainElements.get(id);
-                final Set<Constraint> newConstraints = (oldConstraints == null)
-                    ? new HashSet<>()
-                    : new HashSet<>(oldConstraints);
-
-                newConstraints.add(new Constraint(id, null, 1, -1));
-
-                newDomainElements.put(id, Collections.unmodifiableSet(newConstraints));
-                return new StripesDomain(newDomainElements);
-            } else if (expression instanceof BinaryExpression){
-                final Identifier[] identifiers = new Identifier[]{null, null};
-                final int[] constants = new int[]{0, 0, 0};
-                normalize(expression,identifiers, constants);
             }
-            
+            //newDomainElements.put(id, null);
+            return new StripesDomain(newDomainElements);
+            /*if (expression instanceof Identifier) {
+                
+            } else if (expression instanceof BinaryExpression) {
+                final Identifier[] identifiers = new Identifier[] { null, null };
+                final int[] constants = new int[] { 0, 0, 0 };
+                //normalize(expression,identifiers, constants);
+            }*/
         }
         return StripesDomain.TOP;
     }
 
-    private static void boh(final ValueExpression expression) {
-    
+    @NotNull
+    private Map<Identifier, Set<Constraint>> drop(final Identifier id) {
+        final Map<Identifier, Set<Constraint>> newDomainElements = new HashMap<>();
+        final Predicate<Constraint> constraintFilter = constraint ->
+            !constraint.getX().equals(id) && !id.equals(constraint.getY());
+        final Collector<Constraint, ?, Set<Constraint>> collector = Collectors.toSet();
+
+        for (final Entry<Identifier, Set<Constraint>> element : this.domainElements.entrySet()) {
+            if (!element.getKey().equals(id) && (element.getValue() != null)) { // Drops the constraints associated to the assigned variable
+                final Set<Constraint> newConstraints = element
+                    .getValue()
+                    .stream()
+                    .filter(constraintFilter)
+                    .collect(collector);
+                if (!newConstraints.isEmpty()) {
+                    newDomainElements.put(
+                        element.getKey(),
+                        Collections.unmodifiableSet(newConstraints)
+                    );
+                }
+            }
+        }
+        return newDomainElements;
+    }
+
+    /*private static void boh(final ValueExpression expression) {
         StripesDomain.rec(expression);
     }
-    
+
     /*private static final class Pair<A, B> {
         private final A a;
         private final B b;
@@ -313,7 +357,7 @@ public class StripesDomain
             return this.b;
         }
     }*/
-    
+
     /*
     @SuppressWarnings("ChainOfInstanceofChecks")
     private static @Nullable Set<Pair<Identifier, Integer>> rec(ValueExpression expression) {
@@ -338,7 +382,7 @@ public class StripesDomain
         return null;
     }
     */
-    
+
     /*private static class NormalizationResult {
     
         private final Identifier[] identifiers;
@@ -450,11 +494,11 @@ public class StripesDomain
         
         return false;
     }*/
-    
+
     // "x + y + 3 + 5 * (x + 2(x + y))"
     // "x + y + 3 + 5*x + 10*x + 10*y"
     // "16x + 11y + 3"
-    
+    /*
     private static Map<Identifier, Integer> rec(final ValueExpression expression) {
         
         // x = y
@@ -477,8 +521,8 @@ public class StripesDomain
         //       - Quanto vale la costante k_2?
         
         return Collections.emptyMap();
-    }
-    
+    }*/
+
     @Override
     public StripesDomain forgetIdentifier(final Identifier id) throws SemanticException {
         //this.
@@ -587,10 +631,10 @@ public class StripesDomain
     @SuppressWarnings("ObjectEquality")
     @Override
     public @NonNls String representation() {
-        if (this == StripesDomain.TOP) {
+        if (this.isTop()) {
             return "⊤";
         }
-        if (this == StripesDomain.BOTTOM) {
+        if (this.isBottom()) {
             return "⊥";
         }
         final StringBuilder builder = new StringBuilder("[");
@@ -598,15 +642,19 @@ public class StripesDomain
         // [z -> {(y, x, 20, 4), (y, /, 0, 14)}, y -> {(x, z, 3, 1)}]
 
         for (final Entry<Identifier, Set<Constraint>> otherElements : this.domainElements.entrySet()) {
-            builder.append(otherElements.getKey()).append(" -> {");
+            builder.append(otherElements.getKey()).append(" → {");
 
-            for (final Constraint constraints : otherElements.getValue()) {
-                builder.append(constraints.toString()).append(", ");
+            if (otherElements.getValue() == null) {
+                builder.delete(builder.length() - 2, builder.length()).append(" ⊤, ");
+            } else {
+                for (final Constraint constraints : otherElements.getValue()) {
+                    builder.append(constraints.toString()).append(", ");
+                }
+                if (!otherElements.getValue().isEmpty()) {
+                    builder.delete(builder.length() - 2, builder.length());
+                }
+                builder.append("}, ");
             }
-            if (!otherElements.getValue().isEmpty()) {
-                builder.delete(builder.length() - 2, builder.length());
-            }
-            builder.append("}, ");
         }
 
         // z - k1*(x+y) > k2
