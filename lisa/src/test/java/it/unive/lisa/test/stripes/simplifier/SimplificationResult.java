@@ -1,6 +1,5 @@
-package it.unive.lisa.analysis.nonrelational.value.stripes;
+package it.unive.lisa.test.stripes.simplifier;
 
-import it.unive.lisa.symbolic.value.Identifier;
 import it.unive.lisa.symbolic.value.Variable;
 import org.jetbrains.annotations.Nullable;
 
