@@ -218,7 +218,7 @@ class test1 {
                // def h = a + b;
             }
         }
-    }*/
+    }
     
     test13() {
         def a = 10;
@@ -228,5 +228,34 @@ class test1 {
         if (a - 2*(b+c) > 0){
             def d = a + b;
         }
+    }*/
+
+    /*
+    test14() {
+        def x = 10;
+        def y = 1;
+        def z = 2;
+        
+        
+        y = 2*z;
+        x = y;
+    
+        def a = 20;
+        def b = 2;
+        def c = 4;
+
+        a = 3*b;
+        c = b;
+    }*/
+
+    test15() {
+        def x = 10;
+        def v1 = 5;
+        def u = 1;
+        def v = 2;
+
+        x = 0
+        v1 = 2*x
+        x = u+v
     }
 }
