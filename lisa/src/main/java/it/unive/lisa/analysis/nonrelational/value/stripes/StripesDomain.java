@@ -5,6 +5,8 @@ import it.unive.lisa.analysis.SemanticException;
 import it.unive.lisa.analysis.nonrelational.value.stripes.polinomial.Monomial;
 import it.unive.lisa.analysis.nonrelational.value.stripes.polinomial.Polynomial;
 import it.unive.lisa.analysis.value.ValueDomain;
+import it.unive.lisa.program.cfg.CFG;
+import it.unive.lisa.program.cfg.CodeLocation;
 import it.unive.lisa.program.cfg.ProgramPoint;
 import it.unive.lisa.program.cfg.statement.Assignment;
 import it.unive.lisa.program.cfg.statement.Return;
@@ -40,15 +42,9 @@ public class StripesDomain
     extends BaseLattice<StripesDomain>
     implements ValueDomain<StripesDomain> {
 
-    // TODO: Satisfies
-    // TODO: New constraints on assignment
-    // TODO: Better top and bottom
+    private static final StripesDomain TOP = new StripesDomain();
 
-    private static final StripesDomain TOP = new StripesDomain(false);
-
-    private static final StripesDomain BOTTOM = new StripesDomain(true);
-
-    private boolean isBottom;
+    private static final StripesDomain BOTTOM = new StripesDomain();
 
     @NotNull
     @Unmodifiable
@@ -58,22 +54,15 @@ public class StripesDomain
         @Unmodifiable @NotNull final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> domainElements
     ) {
         this.domainElements = domainElements;
-        this.isBottom = false;
-    }
-
-    private StripesDomain(final boolean isBottom) {
-        this();
-        this.isBottom = isBottom;
     }
 
     public StripesDomain() {
         this.domainElements = new HashMap<>();
-        this.isBottom = false;
     }
 
     @Override
     public boolean isTop() {
-        return this.domainElements.isEmpty() && !this.isBottom;
+        return this.domainElements.isEmpty() && (this != BOTTOM);
     }
 
     @Override
@@ -83,7 +72,7 @@ public class StripesDomain
 
     @Override
     public boolean isBottom() {
-        return this.domainElements.isEmpty() && this.isBottom;
+        return this == BOTTOM; //this.domainElements.isEmpty() && this.isBottom;
     }
 
     @Override
@@ -248,9 +237,9 @@ public class StripesDomain
                             constant - 1
                         )
                     );
-
+                    
                     if ((secondMonomial == null) && (firstMonomial.getCoefficient() == 1)) {
-                        Constraint c = new Constraint(variable, null, 1, -1);
+                        Constraint c = new Constraint(variable, null, 1, -constant - 1);
 
                         newDomainElements.merge(
                             firstMonomial.getVariable(),
@@ -324,14 +313,39 @@ public class StripesDomain
                     }
 
                     if (secondMonomial != null) {
-    
+                        if (
+                            (firstMonomial.getCoefficient() == 1) &&
+                            (secondMonomial.getCoefficient() == 1)
+                        ) {
+                            for (Entry<@NotNull Variable, @NotNull Set<@NotNull Constraint>> entry : this.domainElements.entrySet()) {
+                                for (@NotNull Constraint element : entry.getValue()) {
+                                    if (element.getX().equals(variable)) {
+                                        Constraint c = new Constraint(
+                                            firstMonomial.getVariable(),
+                                            secondMonomial.getVariable(),
+                                            element.getK1(),
+                                            element.getK2()
+                                        );
+                                        newDomainElements.merge(
+                                            entry.getKey(),
+                                            Collections.singleton(c),
+                                            (o, n) -> {
+                                                Set<@NotNull Constraint> a = new HashSet<>(o);
+                                                a.addAll(n);
+                                                return a;
+                                            }
+                                        );
+                                    }
+                                }
+                            }
+                        }
                         // (2)
                         // x = 0
                         // v1 = 2*x          --> {v1 -> [(x, bot, 2, -1)]}
                         // x = u+v           --> {x -> [(u, v, 1, -1)], v1 -> [(u,v,2, -1)]}
                     }
 
-                    /*
+                    /* *************************
                     if (secondMonomial != null) {
                         newConstraints.add(
                             new Constraint(
@@ -343,7 +357,7 @@ public class StripesDomain
                         );
                         int a = 1;
                     }
-                    */
+                    * ****************************/
                     // x -> (v, u, 1, -1) ----> x - 1*(v+u) > -1
                     // x -> (u, v, 1, -1) -----> x- 1*(u+v) > -1
                     /*
@@ -362,6 +376,35 @@ public class StripesDomain
                     );
                     // {x=[(z, ⊥, 2, -1)], y=[(z, ⊥, 2, -1), (x, ⊥, 1, -1)]}
                     return new StripesDomain(newDomainElements);
+                }
+                if ((firstMonomial != null) && (secondMonomial != null)) {
+                    if (
+                        (
+                            (firstMonomial.getCoefficient() == -1) &&
+                            (secondMonomial.getCoefficient() == 1)
+                        ) ||
+                        (
+                            (secondMonomial.getCoefficient() == -1) &&
+                            (firstMonomial.getCoefficient() == 1)
+                        )
+                    ) {
+                        Monomial positive = (firstMonomial.getCoefficient() == 1)
+                            ? firstMonomial
+                            : secondMonomial;
+                        Monomial negative = (firstMonomial.getCoefficient() == -1)
+                            ? firstMonomial
+                            : secondMonomial;
+                        Constraint c = new Constraint(variable, negative.getVariable(), 1, -1);
+                        newDomainElements.merge(
+                            positive.getVariable(),
+                            Collections.singleton(c),
+                            (o, n) -> {
+                                Set<@NotNull Constraint> a = new HashSet<>(o);
+                                a.addAll(n);
+                                return a;
+                            }
+                        );
+                    }
                 }
             }
             return new StripesDomain(newDomainElements);
@@ -440,6 +483,9 @@ public class StripesDomain
 
     @Override
     public StripesDomain forgetIdentifier(final Identifier id) throws SemanticException {
+        if (this.isBottom()) {
+            return this;
+        }
         if (id instanceof Variable variable) {
             final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newDomainElements = new HashMap<>(
                 this.domainElements
@@ -478,7 +524,7 @@ public class StripesDomain
         // y != x --> y < x || y > x   -----> x > y || y > x   x -> (y, _|_, 1, -1)   y -> (x,
         // _|_, 1, -1)
 
-        if (expression instanceof BinaryExpression binaryExpression) {
+        /*if (expression instanceof BinaryExpression binaryExpression) {
             final Polynomial leftPolynomial = Simplifier.simplify(binaryExpression.getLeft(), 3);
             final Polynomial rightPolynomial = Simplifier.simplify(binaryExpression.getRight(), 3);
 
@@ -582,6 +628,24 @@ public class StripesDomain
         satisfies(expression, pp);*/
 
         // (x + y > 0) && (a + b > 0)
+
+        Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newConstraints = new HashMap<>();
+        final Satisfiability result = Normalizer.normalizeCondition(
+            expression,
+            this.domainElements,
+            newConstraints
+        );
+        if (result == Satisfiability.SATISFIED) {
+            return this;
+        }
+        if (result == Satisfiability.NOT_SATISFIED) {
+            return bottom();
+        }
+        Map<@NotNull Variable, @Unmodifiable @NotNull Set<@NotNull Constraint>> newDomainElements = new HashMap<>(
+            this.domainElements
+        );
+        Utils.mergeConstraints(newDomainElements, newConstraints);
+        return new StripesDomain(newDomainElements);
     }
 
     @Override
@@ -608,7 +672,6 @@ public class StripesDomain
         return this.representation();
     }
 
-    @SuppressWarnings("ObjectEquality")
     @Override
     public @NonNls String representation() {
         if (this.isTop()) {

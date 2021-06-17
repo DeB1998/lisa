@@ -29,6 +29,11 @@ public class Monomial {
         this.variable = null;
     }
     
+    Monomial(Monomial monomial) {
+        this.coefficient = monomial.coefficient;
+        this.variable = monomial.variable;
+    }
+    
     public int getCoefficient() {
         
         return this.coefficient;

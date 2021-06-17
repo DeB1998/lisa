@@ -39,6 +39,19 @@ public class Polynomial {
         this.valid = true;
         this.size = 0;
     }
+    
+    public Polynomial(final Polynomial polynomial) {
+    
+        this.monomials = new Monomial[polynomial.monomialCount];
+        for (int i = 0; i < polynomial.monomialCount; i++) {
+            this.monomials[i] = new Monomial(polynomial.monomials[i]);
+        }
+        this.constant = polynomial.constant;
+        this.monomialCount = polynomial.monomialCount;
+        this.isConstant = polynomial.isConstant;
+        this.valid = polynomial.valid;
+        this.size = polynomial.size;
+    }
 
     public Polynomial(final int monomialCount, final Variable variable, final int coefficient) {
         this(monomialCount, 0);
@@ -200,7 +213,9 @@ public class Polynomial {
                     if (monomial.getCoefficient() >= 0 && !first) {
                         builder.append(" + ");
                     } else {
-                        builder.append(" -");
+                        if (monomial.getCoefficient() < 0) {
+                            builder.append(" -");
+                        }
                         if (!first) {
                             builder.append(" ");
                         }
