@@ -1,0 +1,13 @@
+class Test {
+    main() {
+        def a = 10;
+        def b = 5;
+        def c = 1;
+        if (a > b) {
+            c = a - b;
+        } else {
+            c = 0;
+        }
+        return c;
+    }
+}
