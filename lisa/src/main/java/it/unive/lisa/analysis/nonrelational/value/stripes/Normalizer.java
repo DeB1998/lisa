@@ -36,7 +36,7 @@ class Normalizer {
     private static Satisfiability normalizeCondition(
         final SymbolicExpression expression,
         final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> oldConstraints,
-        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newConstraints,
+        @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newConstraints,
         final boolean complement
     ) {
         //noinspection ChainOfInstanceofChecks
@@ -456,7 +456,7 @@ class Normalizer {
         final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> oldConstraints,
         final @Nullable Map<? super @NotNull Variable, @NotNull Set<@NotNull Constraint>> newConstraints
     ) {
-        final Satisfiability constraintVerified = Normalizer.checkVariableConstraint(
+        final boolean normalDirectionSatified = Normalizer.checkVariableConstraint(
             x,
             y,
             z,
@@ -464,16 +464,30 @@ class Normalizer {
             k2,
             oldConstraints
         );
-        if (constraintVerified == Satisfiability.UNKNOWN) {
-            if (newConstraints != null) {
-                Utils.addConstraint(newConstraints, x, new Constraint(y, z, k1, k2));
+        if (normalDirectionSatified) {
+            return Satisfiability.SATISFIED;
+        }
+        if ((k1 == 1) && (z == null)) {
+            final boolean inverseDirectionSatisfied = Normalizer.checkVariableConstraint(
+                y,
+                x,
+                z,
+                k1,
+                -k2-1,
+                oldConstraints
+            );
+            if (inverseDirectionSatisfied) {
+                return Satisfiability.NOT_SATISFIED;
             }
         }
+        if (newConstraints != null) {
+            Utils.addConstraint(newConstraints, x, new Constraint(y, z, k1, k2));
+        }
 
-        return constraintVerified;
+        return Satisfiability.UNKNOWN;
     }
 
-    private static Satisfiability checkVariableConstraint(
+    private static boolean checkVariableConstraint(
         @NotNull final Variable x,
         @NotNull final Variable y,
         @Nullable final Variable z,
@@ -496,12 +510,12 @@ class Normalizer {
                 if (
                     constraint.getX().equals(y) &&
                     Objects.equals(constraint.getY(), z) &&
-                    (constraint.getK1() == k1)
+                    (constraint.getK1() == k1) &&
+                    (constraint.getK2() >= k2)
                 ) {
-                    if (constraint.getK2() >= k2) {
-                        return Satisfiability.SATISFIED;
-                    }
-                    return Satisfiability.NOT_SATISFIED;
+                    return true;
+                    // a -> (b, _, 1, 7) --> a -b>7
+                    // a -> (b, _, 1, >=10)
                 }
             }
         }
@@ -517,6 +531,6 @@ class Normalizer {
         // array_len-1*i > 0
 
         // arr_len-1*i>-1
-        return Satisfiability.UNKNOWN;
+        return false;
     }
 }

@@ -237,7 +237,7 @@ public class StripesDomain
                             constant - 1
                         )
                     );
-                    
+
                     if ((secondMonomial == null) && (firstMonomial.getCoefficient() == 1)) {
                         Constraint c = new Constraint(variable, null, 1, -constant - 1);
 
@@ -425,14 +425,14 @@ public class StripesDomain
         // y = 2*z -----------> [y-2*z > -1]
         // x = y   -----------> [x-y > -1 , x-2*z > -1]
 
-        /* NO!
+        /* *************************** NO!
         // y = 2*z -----------> [y > 2*z - 1]
         // x = 4*y   -----------> [x > 4*y-1 , x > ??????????????????????????????????????]
         // a > 2*b    b > 2*c ---> a > 4*c ?????? ---> NO
         // a = 200
         // b = 90
         // c = 40
-        **/
+        ********************************/
 
         // (1b)
         // a = 3*b --> {a -> [(b, bot, 3, -1)]}
@@ -644,7 +644,9 @@ public class StripesDomain
         Map<@NotNull Variable, @Unmodifiable @NotNull Set<@NotNull Constraint>> newDomainElements = new HashMap<>(
             this.domainElements
         );
+        newDomainElements.replaceAll((k, v) -> new HashSet<>(v));
         Utils.mergeConstraints(newDomainElements, newConstraints);
+        newDomainElements.replaceAll((k, v) -> Collections.unmodifiableSet(v));
         return new StripesDomain(newDomainElements);
     }
 
@@ -693,9 +695,9 @@ public class StripesDomain
             if (!otherElements.getValue().isEmpty()) {
                 builder.delete(builder.length() - 2, builder.length());
             }
-            builder.append("}, ");
+            builder.append("},\n");
         }
-
+        // TODO: \n
         if (builder.length() > 1) {
             builder.delete(builder.length() - 2, builder.length());
         }
