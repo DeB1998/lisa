@@ -314,6 +314,7 @@ class Normalizer {
                                 oldConstraints,
                                 newConstraints
                             );
+                            
                             if (
                                 (
                                     (result == Satisfiability.NOT_SATISFIED) &&
@@ -417,6 +418,7 @@ class Normalizer {
                             }
                             return result1;
                         }
+                        return result1;
                     }
                     return Satisfiability.UNKNOWN;
                 } // end a.getCoeff() == 1

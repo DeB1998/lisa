@@ -4,7 +4,7 @@ class Test {
         def b = 5;
         if (a > b) {
             while (b != a) {
-                b = b + 1;
+                def c = b + 1;
             }
         }
     }
@@ -12,8 +12,9 @@ class Test {
         def a = 10;
         def b = 15;
         def c = 5;
-        def d = a + b + 7;
+        def d = a + b + 7; // --> d - 1*(a+b) > 7
         for (def i = 0; i < a; i = i + 1) {
+            // d - a - b > 2 --> d - 1*(a+b)>2
             if (d > a + b + 2) {
                 c = 0;
             } else {

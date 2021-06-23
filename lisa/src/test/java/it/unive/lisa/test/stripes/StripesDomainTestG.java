@@ -1,5 +1,7 @@
 package it.unive.lisa.test.stripes;
 
+import static org.hamcrest.CoreMatchers.*;
+
 import it.unive.lisa.test.stripes.cfg.program.EndedProgram;
 import it.unive.lisa.test.stripes.cfg.program.For;
 import it.unive.lisa.test.stripes.cfg.program.If;
@@ -7,6 +9,8 @@ import it.unive.lisa.test.stripes.cfg.program.IfBlockWithElse;
 import it.unive.lisa.test.stripes.cfg.program.Program;
 import it.unive.lisa.test.stripes.cfg.program.While;
 import java.io.IOException;
+import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -203,49 +207,55 @@ public class StripesDomainTestG {
 
     @Test
     public void test8() throws IOException {
+        final StripesVariable c = new StripesVariable("c");
+        final StripesVariable d = new StripesVariable("d");
+        final StripesVariable e = new StripesVariable("e");
+        final StripesVariable f = new StripesVariable("f");
+        final StripesVariable i = new StripesVariable("i");
+
         final Program<StripesVariable> program = new Program<>();
         final EndedProgram<StripesVariable> p = program
-            .next("c = 1")
-            .next("d = 4")
-            .next("e = c + d")
+            .next("c = 1", StripesVariable.TOP)
+            .next("d = 4", StripesVariable.TOP)
+            .next("e = c + d", e.clearAndAdd(c, d, 1, -1))
             .next(
-                new If<StripesVariable>("e > 6")
+                new If<>("e > 6", e)
                     .thenBlock()
-                    .next("e = 10")
-                    .next("f = 1")
+                    .next("e = 10", StripesVariable.TOP)
+                    .next("f = 1", StripesVariable.TOP)
                     .elseBlock()
-                    .next("e = 2*(d+c)")
-                    .next("f = 3")
+                    .next("e = 2*(d+c)", e.clearAndAdd(d, c, 2, -1))
+                    .next("f = 3", e)
             )
             .next(
-                new If<StripesVariable>("e > 6")
+                new If<>("e > 6", StripesVariable.TOP)
                     .thenBlock()
-                    .next("e = 5*(d + c)")
-                    .next("f = 1")
+                    .next("e = 5*(d + c)", e.clearAndAdd(d, c, 5, -1))
+                    .next("f = 1", e)
                     .elseBlock()
-                    .next("e = 2*(d+c)")
-                    .next("f = 3")
+                    .next("e = 2*(d+c)", e.clearAndAdd(d, c, 2, -1))
+                    .next("f = 3", e)
             )
             .next(
-                new If<StripesVariable>("e > 6")
+                new If<>("e > 6", StripesVariable.TOP)
                     .thenBlock()
-                    .next("e = 2*(d + c)")
-                    .next("f = 1")
+                    .next("e = 2*(d + c)", e.clearAndAdd(d, c, 2, -1))
+                    .next("f = 1", e)
                     .elseBlock()
-                    .next("e = 2*(d+c)")
-                    .next("f = 3")
+                    .next("e = 2*(d+c)", e.clearAndAdd(d, c, 2, -1))
+                    .next("f = 3", e)
             )
             .next(
-                new If<StripesVariable>("e > 6")
+                new If<>("e > 6", e)
                     .thenBlock()
-                    .next("e = 2*(d + c) + 5")
-                    .next("f = 1")
+                    .next("e = 2*(d + c) + 5", e.clearAndAdd(d, c, 2, 4))
+                    .next("f = 1", e)
                     .elseBlock()
-                    .next("e = 2*(d + c) + 3")
-                    .next("f = 3")
+                    .next("e = 2*(d + c) + 3", e.clearAndAdd(d, c, 2, 2))
+                    .next("f = 3", e)
             )
-            .returnProgram("return");
-        StripesDomainTest.checkProgram(p, "test1.dot");
+            .returnProgram("return", e.clearAndAdd(d, c, 2, 2));
+        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test8(test1_this).dot");
     }
 
     @Test
@@ -294,76 +304,129 @@ public class StripesDomainTestG {
 
     @Test
     public void test11() throws IOException {
+        final StripesVariable a = new StripesVariable("a");
+        final StripesVariable b = new StripesVariable("b");
+        final StripesVariable c = new StripesVariable("c");
+        final StripesVariable d = new StripesVariable("d");
+        final StripesVariable e = new StripesVariable("e");
+        final StripesVariable f = new StripesVariable("f");
+        final StripesVariable i = new StripesVariable("i");
+
         final Program<StripesVariable> program = new Program<>();
         final EndedProgram<StripesVariable> p = program
-            .next("a = 1")
-            .next("b = 2")
-            .next("c = 3")
-            .next("d = 10")
+            .next("a = 1", StripesVariable.TOP)
+            .next("b = 2", StripesVariable.TOP)
+            .next("c = 3", StripesVariable.TOP)
+            .next("d = 10", StripesVariable.TOP)
             .next(
                 new For<StripesVariable>()
-                    .initialization("i = 0")
-                    .condition("i < c")
+                    .initialization("i = 0", StripesVariable.TOP)
+                    .condition("i < c", StripesVariable.TOP)
                     .next(
-                        new While<StripesVariable>("a + b > 0")
+                        new While<>("a + b > 0", c.clearAndAdd(i, null, 1, 0))
                             .next(
-                                new If<StripesVariable>("d > 10")
+                                new If<>(
+                                    "d > 10",
+                                    c
+                                    /*, a.add(b,null, -1, 0), b.add(a, null, -1, 0)*/
+                                )
                                     .thenBlock()
-                                    .next("d = d - 1")
-                                    .next("b = d")
-                                    .next("e = a + b")
+                                    .next("d = d - 1", c)
+                                    .next(
+                                        "b = d",
+                                        c,
+                                        b.clearAndAdd(d, null, 1, -1),
+                                        d.clearAndAdd(b, null, 1, -1)
+                                    )
+                                    .next("e = a + b", c, b, d, e.clearAndAdd(a, b, 1, -1))
                                     .elseBlock()
-                                    .next("f = 5")
-                                    .next("e = a + b")
+                                    .next("f = 5", c)
+                                    .next("e = a + b", c, e.clearAndAdd(a, b, 1, -1))
                             )
-                            .next("g = 3")
+                            .next("g = 3", c)
                     )
-                    .increment("i = i + 1")
+                    .increment("i = i + 1", StripesVariable.TOP)
             )
-            .returnProgram("return");
-        StripesDomainTest.checkProgram(p, "test1.dot");
+            // i - c > -1
+            .returnProgram("return", i.clearAndAdd(c, null, 1, -1));
+        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test11(test1_this).dot");
     }
 
     @Test
     public void test12() throws IOException {
+        final StripesVariable a = new StripesVariable("a");
+        final StripesVariable b = new StripesVariable("b");
+        final StripesVariable c = new StripesVariable("c");
+        final StripesVariable d = new StripesVariable("d");
+        final StripesVariable e = new StripesVariable("e");
+        final StripesVariable f = new StripesVariable("f");
+        final StripesVariable g = new StripesVariable("g");
+        final StripesVariable h = new StripesVariable("h");
+        final StripesVariable i = new StripesVariable("i");
+
         final Program<StripesVariable> program = new Program<>();
         final EndedProgram<StripesVariable> p = program
-            .next("a = 1")
-            .next("b = 2")
-            .next("c = 3")
-            .next("d = a + b")
-            .next("e = b + c")
-            .next("f = a + c")
+            .next("a = 1", StripesVariable.TOP)
+            .next("b = 2", StripesVariable.TOP)
+            .next("c = 3", StripesVariable.TOP)
+            .next("d = a + b", d.clearAndAdd(a, b, 1, -1))
+            .next("e = b + c", d, e.clearAndAdd(b, c, 1, -1))
+            .next("f = a + c", d, e, f.clearAndAdd(a, c, 1, -1))
             .next(
                 new For<StripesVariable>()
-                    .initialization("i = d")
-                    .condition("i < e")
-                    .next("g = d + f")
+                    .initialization(
+                        "i = d",
+                        i.clearAndAdd(d, null, 1, -1).add(a, b, 1, -1),
+                        d.clearAndAdd(a, b, 1, -1).add(i, null, 1, -1),
+                        e,
+                        f
+                    )
+                    .condition("i < e", d.remove(i), e)
+                    .next("g = d + f", d, e.add(i, null, 1, 0), g.add(d, f, 1, -1))
                     .next(
-                        new If<StripesVariable>("g >= 1")
+                        new If<>("g >= 1", d, e, g)
                             .thenBlock()
-                            .next("g = d + 1")
                             .next(
-                                new If<StripesVariable>("i == 0")
-                                    .thenBlock()
-                                    .next("f = 0")
-                                    .next("g = d + 1")
+                                "g = d + 1", // d = a+b --> g = d + 1 --> g = a+b+1 g > a+b
+                                d.clearAndAdd(a, b, 1, -1).add(g, null, 1, -2),
+                                e.clearAndAdd(b, c, 1, -1).add(i, null, 1, 0),
+                                g.clearAndAdd(d, null, 1, 0).add(a, b, 1, 0)
                             )
-                            .next("h = 9")
-                            .elseBlock()
-                            .next("g = d + 3")
                             .next(
-                                new If<StripesVariable>("a != 0")
+                                new If<>("i == 0", d, e, g)
                                     .thenBlock()
-                                    .next("f = a + b + 1")
+                                    .next("f = 0", d, e, g)
+                                    .next("g = d + 1", d, e, g)
+                            )
+                            .next("h = 9", d, e, g)
+                            .elseBlock()
+                            .next(
+                                "g = d + 3",
+                                d.clearAndAdd(a, b, 1, -1).add(g, null, 1, -4),
+                                e.clearAndAdd(b, c, 1, -1).add(i, null, 1, 0),
+                                g.clearAndAdd(d, null, 1, 2).add(a, b, 1, 2)
+                            )
+                            .next(
+                                new If<>("a != 0", d, e, g)
+                                    .thenBlock()
+                                    .next("f = a + b + 1", d, e, f.clearAndAdd(a, b, 1, 0), g)
                                     .elseBlock()
-                                    .next("f = a + b + 10")
-                                    .next("g = (3*d + 6)/3 + 1")
+                                    .next("f = a + b + 10", d, e, f.clearAndAdd(a, b, 1, 9), g)
+                                    .next("g = (3*d + 6)/3 + 1", d, e, f, g)
                             )
                     )
-                    .increment("i = i + 1")
+                    .increment(
+                        "i = i + 1",
+                        d,
+                        e.clearAndAdd(b, c, 1, -1),
+                        g.clearAndAdd(d, null, 1, 0).add(a, b, 1, 0)
+                    )
             )
-            .returnProgram("return");
+            .returnProgram(
+                "return",
+                d.clearAndAdd(a, b, 1, -1),
+                e.clearAndAdd(b, c, 1, -1)
+            );
         StripesDomainTest.checkProgram(p, "test1.dot");
     }
 
@@ -522,56 +585,182 @@ public class StripesDomainTestG {
         StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test18(test1_this).dot");
     }
 
+    /*
     @Test
     public void testX() throws IOException {
         final Program<StripesVariable> program = new Program<>();
         final EndedProgram<StripesVariable> p = program.next("").next("").returnProgram("return");
         StripesDomainTest.checkProgram(p, "test1.dot");
-    }
+    }*/
 
     @Test
     public void testImg1() throws IOException {
+        final StripesVariable a = new StripesVariable("a");
+        final StripesVariable b = new StripesVariable("b");
+        final StripesVariable c = new StripesVariable("c");
+
         final Program<StripesVariable> program = new Program<>();
         final EndedProgram<StripesVariable> p = program
-            .next("a = 10")
-            .next("b = 5")
-            .next("c = 1")
+            .next("a = 10", StripesVariable.TOP)
+            .next("b = 5", StripesVariable.TOP)
+            .next("c = 1", StripesVariable.TOP)
             .next(
-                new If<StripesVariable>("a > b")
+                new If<>("a > b", StripesVariable.TOP)
                     .thenBlock()
-                    .next("c = a - b")
+                    // a = b+c
+                    .next("c = a - b", a.clearAndAdd(b, null, 1, 0).add(b, c, 1, -1))
                     .elseBlock()
-                    .next("c = 0")
+                    // b > a -1
+                    .next("c = 0", b.clearAndAdd(a, null, 1, -1))
             )
-            .returnProgram("return c");
-        StripesDomainTest.checkProgram(p, "test1.dot");
+            .returnProgram("return c", StripesVariable.TOP);
+        StripesDomainTest.checkProgram(p, "analysis___untyped_TestImg1.main(TestImg1_this).dot");
     }
 
     @Test
     public void testImg2() throws IOException {
+        final StripesVariable a = new StripesVariable("a");
+        final StripesVariable b = new StripesVariable("b");
+        final StripesVariable c = new StripesVariable("c");
+        final StripesVariable d = new StripesVariable("d");
+        final StripesVariable e = new StripesVariable("e");
+        final StripesVariable f = new StripesVariable("f");
+
+        //noinspection ConstantConditions
+        Assert.assertThat("To implement!", false, is(true));
+
         final Program<StripesVariable> program = new Program<>();
         final EndedProgram<StripesVariable> p = program
-            .next("a = 5")
-            .next("b = 3")
-            .next("c = 7")
+            .next("a = 5", StripesVariable.TOP)
+            .next("b = 3", StripesVariable.TOP)
+            .next("c = 7", StripesVariable.TOP)
             .next(
-                new While<StripesVariable>("c + b > 0")
-                    .next("d = a - b")
-                    .next("e = d")
-                    .next("f = 2*b + 1")
-                    .next("d = f")
+                new While<>("c + b > 0", StripesVariable.TOP)
+                    .next("d = a - b", a.add(d, b, 1, -1))
+                    .next(
+                        "e = d",
+                        a.add(e, b, 1, -1),
+                        e.clearAndAdd(d, null, 1, -1),
+                        d.clearAndAdd(e, null, 1, -1)
+                    )
+                    .next("f = 2*b + 1", a, e, d, f.clearAndAdd(b, null, 2, 0))
+                    // f = d
+
+                    // (2)
+                    // u = 9
+                    // v = 14
+                    // x = 2
+                    // v1 = 2*x = 4          --> v1 -> [(x, bot, 2, -1)] ------> v1-2*x > -1
+                    // x = u+v x = 23          --> x -> [(u, v, 1, -1)]    ------> x-1*(u+v) > -1
+                    // --> v1 = u+v      --> v1 -> [(u,v,2, -1)]     ------> v1-2*(u+v) > -1
+
+                    .next(
+                        "d = f",
+                        a,
+                        e.remove(d).add(f, null, 1, -1),
+                        d.clearAndAdd(f, null, 1, -1).add(b, null, 2, 0),
+                        f.add(d, null, 1, -1)
+                    )
                     .next("e = b")
                     .next("b = a + c")
             )
             .returnProgram("return");
 
-        StripesDomainTest.checkProgram(p, "test2.dot");
+        StripesDomainTest.checkProgram(p, "analysis___untyped_TestImg2.main(TestImg2_this).dot");
     }
 
     @Test
-    public void testImg3() throws IOException {
+    public void testImg3_1() throws IOException {
+        final StripesVariable a = new StripesVariable("a");
+        final StripesVariable b = new StripesVariable("b");
+        final StripesVariable c = new StripesVariable("c");
+
         final Program<StripesVariable> program = new Program<>();
-        final EndedProgram<StripesVariable> p = program.next("").next("").returnProgram("return");
-        StripesDomainTest.checkProgram(p, "test1.dot");
+        final EndedProgram<StripesVariable> p = program
+            .next("a = 10", StripesVariable.TOP)
+            .next("b = 5", StripesVariable.TOP)
+            .next(
+                new If<>("a > b", StripesVariable.TOP)
+                    .thenBlock()
+                    .next(
+                        new While<>("b != a", a.add(b, null, 1, 0))
+                            .next(
+                                "c = b + 1",
+                                a.add(c, null, 1, -1),
+                                c.clearAndAdd(b, null, 1, 0),
+                                b.add(c, null, 1, -2)
+                            )
+                    )
+                // c = b + 1
+                // a > b
+                // a + 1 > b + 1
+                // a + 1 > c
+                // a - c > -1
+            )
+            // b > a -1
+            .returnProgram("return", b.clearAndAdd(a, null, 1, -1));
+        StripesDomainTest.checkProgram(p, "analysis___untyped_TestImg3.main1(TestImg3_this).dot");
+    }
+
+    @Test
+    public void testImg3_2() throws IOException {
+        final StripesVariable a = new StripesVariable("a");
+        final StripesVariable b = new StripesVariable("b");
+        final StripesVariable c = new StripesVariable("c");
+        final StripesVariable d = new StripesVariable("d");
+        final StripesVariable i = new StripesVariable("i");
+
+        final Program<StripesVariable> program = new Program<>();
+        final EndedProgram<StripesVariable> p = program
+            .next("a = 10", StripesVariable.TOP)
+            .next("b = 15", StripesVariable.TOP)
+            .next("c = 5", StripesVariable.TOP)
+            .next("d = a + b + 7", d.clearAndAdd(a, b, 1, 6))
+            .next(
+                new For<StripesVariable>()
+                    .initialization("i = 0", d)
+                    .condition("i < a", d)
+                    .next(
+                        new If<>("d > a + b + 2", d, a.clearAndAdd(i, null, 1, 0))
+                            .thenBlock()
+                            .next("c = 0", d, a)
+                            .elseBlock()
+                            .next("c = 1", StripesVariable.BOTTOM)
+                    )
+                    .increment("i = i + 1", d, a)
+            )
+            // i >= a
+            .returnProgram("return", d, i.clearAndAdd(a, null, 1, -1));
+        StripesDomainTest.checkProgram(p, "analysis___untyped_TestImg3.main2(TestImg3_this).dot");
+    }
+
+    @Test
+    public void testImg3_3() throws IOException {
+        final StripesVariable a = new StripesVariable("a");
+        final StripesVariable b = new StripesVariable("b");
+        final StripesVariable c = new StripesVariable("c");
+        final StripesVariable d = new StripesVariable("d");
+        final StripesVariable e = new StripesVariable("e");
+
+        final Program<StripesVariable> program = new Program<>();
+        final EndedProgram<StripesVariable> p = program
+            .next("a = 10", StripesVariable.TOP)
+            .next("b = 15", StripesVariable.TOP)
+            .next("d = a + b + 7", d.clearAndAdd(a, b, 1, 6))
+            .next(
+                "e = a",
+                d.add(e, b, 1, 6),
+                e.clearAndAdd(a, null, 1, -1),
+                a.clearAndAdd(e, null, 1, -1)
+            )
+            .next(
+                new If<>("(a < e) || (!(d <= a + b) && e < a)", d, e, a)
+                    .thenBlock()
+                    .next("c = 100", StripesVariable.BOTTOM)
+                    .elseBlock()
+                    .next("c = 50", d, e, a)
+            )
+            .returnProgram("return", d, e, a);
+        StripesDomainTest.checkProgram(p, "analysis___untyped_TestImg3.main3(TestImg3_this).dot");
     }
 }

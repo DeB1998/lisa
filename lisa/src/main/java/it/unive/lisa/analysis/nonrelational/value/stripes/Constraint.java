@@ -90,6 +90,7 @@ final class Constraint {
     }
 
     boolean isSameConstraint(@NotNull final Constraint other) {
+        // TODO: (x, y, k1, k2) is the same constraint as (y, x, k1, k2)
         return (this.x.equals(other.x) && (this.k1 == other.k1) && Objects.equals(this.y, other.y));
     }
 }

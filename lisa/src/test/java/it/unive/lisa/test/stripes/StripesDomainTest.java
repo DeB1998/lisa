@@ -1,27 +1,14 @@
 package it.unive.lisa.test.stripes;
 
-import static org.hamcrest.CoreMatchers.is;
-
 import it.unive.lisa.AnalysisException;
 import it.unive.lisa.LiSA;
 import it.unive.lisa.LiSAConfiguration;
 import it.unive.lisa.LiSAFactory;
 import it.unive.lisa.analysis.AbstractState;
-import it.unive.lisa.analysis.BaseLattice;
-import it.unive.lisa.analysis.SemanticException;
 import it.unive.lisa.analysis.heap.HeapDomain;
-import it.unive.lisa.analysis.nonrelational.value.stripes.Simplifier;
 import it.unive.lisa.analysis.nonrelational.value.stripes.StripesDomain;
-import it.unive.lisa.analysis.nonrelational.value.stripes.polinomial.Monomial;
-import it.unive.lisa.analysis.nonrelational.value.stripes.polinomial.Polynomial;
-import it.unive.lisa.analysis.value.ValueDomain;
 import it.unive.lisa.imp.IMPFrontend;
 import it.unive.lisa.imp.ParsingException;
-import it.unive.lisa.program.cfg.ProgramPoint;
-import it.unive.lisa.program.cfg.statement.Assignment;
-import it.unive.lisa.symbolic.value.Identifier;
-import it.unive.lisa.symbolic.value.ValueExpression;
-import it.unive.lisa.symbolic.value.Variable;
 import it.unive.lisa.test.stripes.cfg.dot.DotReader;
 import it.unive.lisa.test.stripes.cfg.dot.EdgeType;
 import it.unive.lisa.test.stripes.cfg.graph.Cfg;
@@ -29,19 +16,13 @@ import it.unive.lisa.test.stripes.cfg.graph.InvalidCfgException;
 import it.unive.lisa.test.stripes.cfg.program.EndedProgram;
 import it.unive.lisa.test.stripes.cfg.program.Program;
 import it.unive.lisa.test.stripes.cfg.program.While;
-import it.unive.lisa.test.stripes.simplifier.OldSimplifier;
-import it.unive.lisa.test.stripes.simplifier.SimplificationResult;
+import org.junit.Test;
+
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.junit.Assert;
-import org.junit.Test;
 
 /**
  * Description.

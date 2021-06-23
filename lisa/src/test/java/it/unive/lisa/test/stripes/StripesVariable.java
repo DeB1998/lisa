@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
 public class StripesVariable implements Variable<StripesVariable> {
 
     public static final StripesVariable TOP = new StripesVariable("⊤");
-    
+
     public static final StripesVariable BOTTOM = new StripesVariable("⊥");
 
     private static class Constraint {
@@ -70,8 +70,14 @@ public class StripesVariable implements Variable<StripesVariable> {
 
             if (this.k1 != that.k1) return false;
             if (this.k2 != that.k2) return false;
-            if (!this.y.equals(that.y)) return false;
-            return this.z != null ? this.z.equals(that.z) : that.z == null;
+
+            if (this.y.equals(that.y)) {
+                return Objects.equals(this.z, that.z);
+            }
+            if (this.y.equals(that.z)) {
+                return Objects.equals(this.z, that.y);
+            }
+            return false;
         }
 
         @Override

@@ -194,7 +194,7 @@ public class StripesDomain
         }
 
         if ((pp instanceof Assignment) && (id instanceof Variable variable)) {
-            final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newDomainElements =
+            Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newDomainElements =
                 this.drop(variable);
 
             final Polynomial resultingPolynomial = Simplifier.simplify(expression, 2);
@@ -251,6 +251,9 @@ public class StripesDomain
                             }
                         );
 
+                        Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newDomainElementsCopy = new HashMap<>(
+                            newDomainElements
+                        );
                         for (Entry<@NotNull Variable, @NotNull Set<@NotNull Constraint>> entry : newDomainElements.entrySet()) {
                             for (@NotNull Constraint element : entry.getValue()) {
                                 if (
@@ -263,10 +266,10 @@ public class StripesDomain
                                             element.getX(),
                                             element.getY(),
                                             element.getK1(),
-                                            element.getK2()
+                                            element.getK2() + constant
                                         );
 
-                                    newDomainElements.merge(
+                                    newDomainElementsCopy.merge(
                                         variable,
                                         Collections.singleton(c),
                                         (o, n) -> {
@@ -292,10 +295,10 @@ public class StripesDomain
                                             variable,
                                             element.getY(),
                                             element.getK1(),
-                                            element.getK2()
+                                            element.getK2() - constant
                                         );
 
-                                    newDomainElements.merge(
+                                    newDomainElementsCopy.merge(
                                         entry.getKey(),
                                         Collections.singleton(c),
                                         (o, n) -> {
@@ -307,12 +310,13 @@ public class StripesDomain
                                 }
                             }
                         }
+                        newDomainElements = newDomainElementsCopy;
                         // (1b)
                         // a = 3*b --> {a -> [(b, bot, 3, -1)]}
                         // c = b   --> {c -> [(b, bot, 1, -1)], a -> [(c, bot, 3, -1), (b, bot, 3, -1)]}
                     }
 
-                    if (secondMonomial != null) {
+                    /*TODO: if (secondMonomial != null) {
                         if (
                             (firstMonomial.getCoefficient() == 1) &&
                             (secondMonomial.getCoefficient() == 1)
@@ -343,7 +347,7 @@ public class StripesDomain
                         // x = 0
                         // v1 = 2*x          --> {v1 -> [(x, bot, 2, -1)]}
                         // x = u+v           --> {x -> [(u, v, 1, -1)], v1 -> [(u,v,2, -1)]}
-                    }
+                    }*/
 
                     /* *************************
                     if (secondMonomial != null) {

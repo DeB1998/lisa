@@ -170,7 +170,6 @@ class test1 {
         }
     }
     
-    /*
     test11() {
         def a = 1;
         def b = 2;
@@ -191,6 +190,7 @@ class test1 {
             }
         }
     }
+    
     
     test12() {
         def a = 1;
@@ -271,8 +271,6 @@ class test1 {
         x = u - v;
     }
     
-    
-    
     test17() {
         def array_length = 10;
         // def array = new int[array_length];
@@ -317,5 +315,15 @@ class test1 {
                 def d = 10;
             }
         }
+    }
+    */
+    test19() {
+        def a = 1;
+        def b = 9;
+        for (def i = 0; i < a; i = i+1) {
+            b = 10;
+            def c = 10;
+        }
+        return 4;
     }
 }
