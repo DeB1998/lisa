@@ -372,6 +372,7 @@ public class StripesDomainTestG {
             .next("d = a + b", d.clearAndAdd(a, b, 1, -1))
             .next("e = b + c", d, e.clearAndAdd(b, c, 1, -1))
             .next("f = a + c", d, e, f.clearAndAdd(a, c, 1, -1))
+            .next("i = 0", d, e, f)
             .next(
                 new For<StripesVariable>()
                     .initialization(
@@ -422,12 +423,9 @@ public class StripesDomainTestG {
                         g.clearAndAdd(d, null, 1, 0).add(a, b, 1, 0)
                     )
             )
-            .returnProgram(
-                "return",
-                d.clearAndAdd(a, b, 1, -1),
-                e.clearAndAdd(b, c, 1, -1)
-            );
-        StripesDomainTest.checkProgram(p, "test1.dot");
+            .returnProgram("return", d.clearAndAdd(a, b, 1, -1), e.clearAndAdd(b, c, 1, -1),
+                    i.clearAndAdd(e, null, 1, -1));
+        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test12(test1_this).dot");
     }
 
     @Test
@@ -583,6 +581,29 @@ public class StripesDomainTestG {
             )
             .returnProgram("return", StripesVariable.TOP);
         StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test18(test1_this).dot");
+    }
+
+    @Test
+    public void test19() throws IOException {
+        final StripesVariable a = new StripesVariable("a");
+        final StripesVariable b = new StripesVariable("b");
+        final StripesVariable c = new StripesVariable("c");
+        final StripesVariable i = new StripesVariable("i");
+
+        final Program<StripesVariable> program = new Program<>();
+        final EndedProgram<StripesVariable> p = program
+            .next("a = 1", StripesVariable.TOP)
+            .next("b = 9", StripesVariable.TOP)
+            .next("i = 0", StripesVariable.TOP)
+            .next(
+                new For<StripesVariable>()
+                    .condition("i < a", StripesVariable.TOP)
+                    .next("b = 10", a.add(i, null, 1, 0))
+                    .next("c = 10", a)
+                    .increment("i = i + 1", StripesVariable.TOP)
+            )
+            .returnProgram("return", i.clearAndAdd(a, null, 1, -1));
+        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test19(test1_this).dot");
     }
 
     /*

@@ -1,5 +1,6 @@
 class test1 {
     
+    
     test1() {
         def a = new int[5];
         def b = new int[3][3];
@@ -110,7 +111,7 @@ class test1 {
         def m = 2*b + 3;
         def l = new float[10][c];
     }
-    /*
+    
     test8() {
         def c = 1;
         def d = 4;
@@ -147,7 +148,7 @@ class test1 {
             def f = 3;
         }
     }
-    */
+    
     test9() {
         def c = 1;
         def d = 4;
@@ -200,8 +201,9 @@ class test1 {
         def d = a + b;
         def e = b + c;
         def f = a + c;
+        def i = 0;
         
-        for(def i = d; i < e; i = i + 1) {
+        for(i = d; i < e; i = i + 1) {
             def g = d + f;
             if (g >= 1) {
                 g = d + 1;
@@ -222,7 +224,6 @@ class test1 {
             }
         }
     }
-     */
     
     test13() {
         def a = 10;
@@ -316,11 +317,12 @@ class test1 {
             }
         }
     }
-    */
+    
     test19() {
         def a = 1;
         def b = 9;
-        for (def i = 0; i < a; i = i+1) {
+        def i = 0;
+        for (; i < a; i = i+1) {
             b = 10;
             def c = 10;
         }

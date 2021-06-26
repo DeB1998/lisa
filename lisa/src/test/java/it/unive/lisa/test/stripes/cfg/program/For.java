@@ -26,4 +26,16 @@ public class For<V extends Variable<V>> implements ForBlock<V> {
     
         return codeBlock.initialization(variables);
     }
+    
+    @Override
+    public ForWithConditionBlock<V> condition(V... variables) {
+        
+        return this.codeBlock.condition(variables);
+    }
+    
+    @Override
+    public ForWithConditionBlock<V> condition(String identifier, V... variables) {
+        
+        return this.codeBlock.condition(identifier, variables);
+    }
 }

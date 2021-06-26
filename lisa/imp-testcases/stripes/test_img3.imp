@@ -1,4 +1,5 @@
-class Test {
+class TestImg3 {
+    /*
     main1() {
         def a = 10;
         def b = 5;
@@ -8,6 +9,8 @@ class Test {
             }
         }
     }
+    
+     */
     main2() {
         def a = 10;
         def b = 15;
@@ -22,6 +25,7 @@ class Test {
             }
         }
     }
+    /*
     main3() {
         def a = 10;
         def b = 15;
@@ -34,4 +38,6 @@ class Test {
             def c = 50;
         }
     }
+    
+     */
 }

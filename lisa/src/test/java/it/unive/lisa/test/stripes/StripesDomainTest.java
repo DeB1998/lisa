@@ -222,7 +222,7 @@ public class StripesDomainTest {
         final List<StripesVariable> firstData,
         final List<StripesVariable> secondData
     ) {
-        throw new AssertionError(firstIdentifier + " differs in size " + secondIdentifier);
+        throw new AssertionError(firstIdentifier + " differs in size from " + secondIdentifier);
     }
 
     private static void nodesDiffersInData(

@@ -17,13 +17,13 @@ public class ForCodeBlock<V extends Variable<V>>
     @NotNull
     private WhileCodeBlock<V> whileBlock;
 
-    @NotNull
+    @Nullable
     private SequenceCodeBlock<V> initializationBlock;
 
     @SuppressWarnings({"SuspiciousArrayCast", "ZeroLengthArrayAllocation"})
     public ForCodeBlock() {
         this.whileBlock = new WhileCodeBlock<>("", (V[]) new Variable[0]);
-        this.initializationBlock = new SequenceCodeBlock<>("", (V[]) new Variable[0]);
+        this.initializationBlock = null;
     }
 
     @Override
@@ -75,8 +75,11 @@ public class ForCodeBlock<V extends Variable<V>>
     @Override
     <T> Node<T> convert(VariableDataExtractor<V, T> extractor) {
         Node<T> whileNode = whileBlock.convert(extractor);
-        Node<T> initializationNode = this.initializationBlock.convert(extractor);
-        initializationNode.linkTo(whileNode);
-        return new ForNode<>(initializationNode, whileNode);
+        if (this.initializationBlock != null) {
+            Node<T> initializationNode = this.initializationBlock.convert(extractor);
+            initializationNode.linkTo(whileNode);
+            return new ForNode<>(initializationNode, whileNode);
+        }
+        return new ForNode<>(null, whileNode);
     }
 }
