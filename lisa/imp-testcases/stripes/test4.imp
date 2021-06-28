@@ -1,0 +1,15 @@
+class test1 {
+    
+    test4() {
+        def x = 1;
+        def y = 2;
+        
+        def a = x + y + 3 + 5 * (x + 2 * (x + y));
+        def b = x + y + 3 + 5*x + 10*x + 10*y;
+        def c = 16 * x + 11 * y + 3;
+    
+        a = x + y + 3 + 5 * (2 * (x + y));
+        b = x + y + 3 + 10*x + 10*y;
+        c = 11 * x + 11 * y + 3;
+    }
+}

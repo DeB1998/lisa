@@ -22,17 +22,9 @@ import it.unive.lisa.program.cfg.statement.Assignment;
 import it.unive.lisa.symbolic.value.Identifier;
 import it.unive.lisa.symbolic.value.ValueExpression;
 import it.unive.lisa.symbolic.value.Variable;
-import it.unive.lisa.test.stripes.cfg.dot.DotReader;
-import it.unive.lisa.test.stripes.cfg.dot.EdgeType;
-import it.unive.lisa.test.stripes.cfg.graph.Cfg;
-import it.unive.lisa.test.stripes.cfg.graph.InvalidCfgException;
-import it.unive.lisa.test.stripes.cfg.program.EndedProgram;
-import it.unive.lisa.test.stripes.cfg.program.Program;
-import it.unive.lisa.test.stripes.cfg.program.While;
 import it.unive.lisa.test.stripes.simplifier.OldSimplifier;
 import it.unive.lisa.test.stripes.simplifier.SimplificationResult;
 
-import java.io.IOException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -114,14 +106,14 @@ public class StripesDomainOldTest {
 
                     Assert.assertThat(
                         "Constants are different in expression " + expression,
-                        result2.getConstant(),
+                        result2.getConstantCoefficient(),
                         is(constant)
                     );
 
                     if ((firstVariable == null) && (secondVariable == null)) {
                         Assert.assertThat(
                             "Result is not constant in expression " + expression,
-                            result2.isConstant(),
+                            result2.isConstantPolynomial(),
                             is(true)
                         );
                     } else if ((firstVariable != null) && (secondVariable == null)) {

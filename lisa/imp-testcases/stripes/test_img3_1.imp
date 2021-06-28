@@ -1,0 +1,12 @@
+class TestImg3 {
+    
+    main1() {
+        def a = 10;
+        def b = 5;
+        if (a > b) {
+            while (b != a) {
+                def c = b + 1;
+            }
+        }
+    }
+}

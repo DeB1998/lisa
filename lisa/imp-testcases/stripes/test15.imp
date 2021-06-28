@@ -1,0 +1,13 @@
+class test1 {
+    
+    test15() {
+        def x = 10;
+        def v1 = 5;
+        def u = 1;
+        def v = 2;
+
+        x = 0;
+        v1 = 2*x;
+        x = u+v;
+    }
+}

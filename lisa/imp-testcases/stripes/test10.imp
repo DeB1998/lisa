@@ -1,0 +1,13 @@
+class test1 {
+    
+    test10() {
+        def c = 1;
+        def d = 4;
+        def e = c + d;
+        def f = (-d) - e;
+        while(c > 0) {
+            d = e - 1;
+            f = (-d) - e;
+        }
+    }
+}

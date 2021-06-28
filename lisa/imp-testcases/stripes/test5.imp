@@ -1,0 +1,23 @@
+class test1 {
+    
+    test5() {
+        def c = 10;
+        def d = 15;
+        def f = 2*(c + d);
+        def g = f * 0;
+        
+        def a = "ciao";
+        def b = strcat(a, "ccc");
+        
+        
+        def e = new int[2];
+        e[0] = 1;
+        e[1] = 2;
+        
+        //def h = new test1();
+        //def i = h.test3();
+        //h.testField = c + d;
+        //def j = h.testField;
+        def k = e[0] + e[1] + 3;
+    }
+}

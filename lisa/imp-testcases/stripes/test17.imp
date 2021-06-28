@@ -1,0 +1,37 @@
+class test1 {
+    
+    test17() {
+        def array_length = 10;
+        // def array = new int[array_length];
+        
+        def i = array_length - 1; //
+        // i = arr_len - 1 --> i - arr_len = -1 --> i - 1*(arr_len) > -2
+        // arr_len = i + 1 --> arr_len-i = 1 --> arr_len - 1*(i) > 0
+        
+        if (i >= array_length) { // i - arr_len >= 0 --> i-arr_len > -1 --> UNK
+                                 // !(i-arr_len >= 0) --> i - arr_len < 0 --> arr_len - i > 0
+            // prove this is unreachable
+            def a = 7;
+//            def b = 9;
+        }
+        
+        // {i -> [(arr_len, _, 1, -2)], arr_len -> [(i, _, 1, 0)]}
+        
+        
+        // arr_len + 100 >= i
+        // arr_len >= i - 100
+        // arr_len -i >= -100
+        // arr_len -i > -101
+        // arr_len -> (i, null, 1, >=-101)
+        if (i <= array_length + 100) {
+            def c = 9;
+        } else { // i > arr_len + 100 --> i - arr_len > 100 -----> i-> (arr_len, _, 1 >=100)
+            def ahahahah = 10;
+        }
+        def a = 5;
+        def b = 9;
+        if (a > b) {
+            def c = 17;
+        }
+    }
+}

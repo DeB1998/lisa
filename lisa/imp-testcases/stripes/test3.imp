@@ -1,0 +1,11 @@
+class test1 {
+    
+    test3() {
+        def y = 0;
+        def x = y;
+        def a = y;
+        x = 2;
+        
+        return 4;
+    }
+}

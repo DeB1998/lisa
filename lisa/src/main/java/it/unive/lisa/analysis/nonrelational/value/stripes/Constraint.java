@@ -1,10 +1,9 @@
 package it.unive.lisa.analysis.nonrelational.value.stripes;
 
 import it.unive.lisa.symbolic.value.Variable;
+import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Objects;
 
 /**
  * Description.
@@ -16,36 +15,31 @@ import java.util.Objects;
 final class Constraint {
 
     @NotNull
-    private final Variable x;
+    private final Variable y;
 
     @Nullable
-    private final Variable y;
+    private final Variable z;
 
     private final int k1;
 
     private final int k2;
 
-    Constraint(
-        @NotNull final Variable x,
-        @Nullable final Variable y,
-        final int k1,
-        final int k2
-    ) {
-        this.x = x;
+    Constraint(@NotNull final Variable y, @Nullable final Variable z, final int k1, final int k2) {
         this.y = y;
+        this.z = z;
 
         this.k1 = k1;
         this.k2 = k2;
     }
 
     @NotNull
-    Variable getX() {
-        return this.x;
+    Variable getY() {
+        return this.y;
     }
 
     @Nullable
-    Variable getY() {
-        return this.y;
+    Variable getZ() {
+        return this.z;
     }
 
     int getK1() {
@@ -70,15 +64,15 @@ final class Constraint {
         return (
             (this.k1 == otherConstraint.k1) &&
             (this.k2 == otherConstraint.k2) &&
-            this.x.equals(otherConstraint.x) &&
-            (Objects.equals(this.y, otherConstraint.y))
+            this.y.equals(otherConstraint.y) &&
+            (Objects.equals(this.z, otherConstraint.z))
         );
     }
 
     @Override
     public int hashCode() {
-        int result = this.x.hashCode();
-        result = (31 * result) + ((this.y != null) ? this.y.hashCode() : 0);
+        int result = this.y.hashCode();
+        result = (31 * result) + ((this.z != null) ? this.z.hashCode() : 0);
         result = (31 * result) + this.k1;
         result = (31 * result) + this.k2;
         return result;
@@ -86,11 +80,24 @@ final class Constraint {
 
     @Override
     public String toString() {
-        return "(" + this.x + ", " + ((this.y == null) ? "⊥" : this.y) + ", " + this.k1 + ", " + this.k2 + ')';
+        return (
+            "(" +
+            this.y +
+            ", " +
+            ((this.z == null) ? "⊥" : this.z) +
+            ", " +
+            this.k1 +
+            ", " +
+            this.k2 +
+            ')'
+        );
     }
 
-    boolean isSameConstraint(@NotNull final Constraint other) {
-        // TODO: (x, y, k1, k2) is the same constraint as (y, x, k1, k2)
-        return (this.x.equals(other.x) && (this.k1 == other.k1) && Objects.equals(this.y, other.y));
+    boolean differsOnlyOnK2(@NotNull final Constraint other) {
+        return (
+            (this.y.equals(other.y) || this.y.equals(other.z)) &&
+            (Objects.equals(this.z, other.z) || other.y.equals(this.z)) &&
+            (this.k1 == other.k1)
+        );
     }
 }

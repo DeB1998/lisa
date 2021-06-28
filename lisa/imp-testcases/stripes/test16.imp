@@ -1,0 +1,10 @@
+class test1 {
+    
+    test16(){
+        def x = 10;
+        def u = 5;
+        def v = 1;
+
+        x = u - v;
+    }
+}

@@ -1,0 +1,39 @@
+class test1 {
+    
+    test8() {
+        def c = 1;
+        def d = 4;
+        def e = c + d;
+        if (e > 6) {
+            e = 10;
+            def f = 1;
+        } else {
+            e = 2*(d + c);
+            def f = 3;
+        }
+    
+        if (e > 6) {
+            e = 5*(d + c);
+            def f = 1;
+        } else {
+            e = 2*(d + c);
+            def f = 3;
+        }
+    
+        if (e > 6) {
+            e = 2*(d + c);
+            def f = 1;
+        } else {
+            e = 2*(d + c);
+            def f = 3;
+        }
+    
+        if (e > 6) {
+            e = 2*(d + c) + 5;
+            def f = 1;
+        } else {
+            e = 2*(d + c) + 3;
+            def f = 3;
+        }
+    }
+}

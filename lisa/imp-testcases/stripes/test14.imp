@@ -1,0 +1,19 @@
+class test1 {
+    
+    test14() {
+        def x = 10;
+        def y = 1;
+        def z = 2;
+        
+        
+        y = 2*z;
+        x = y;
+    
+        def a = 20;
+        def b = 2;
+        def c = 4;
+
+        a = 3*b;
+        c = b;
+    }
+}

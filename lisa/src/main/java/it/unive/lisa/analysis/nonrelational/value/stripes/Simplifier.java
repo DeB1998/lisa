@@ -3,7 +3,6 @@ package it.unive.lisa.analysis.nonrelational.value.stripes;
 import it.unive.lisa.analysis.nonrelational.value.stripes.polinomial.Polynomial;
 import it.unive.lisa.symbolic.SymbolicExpression;
 import it.unive.lisa.symbolic.value.BinaryExpression;
-import it.unive.lisa.symbolic.value.BinaryOperator;
 import it.unive.lisa.symbolic.value.Constant;
 import it.unive.lisa.symbolic.value.UnaryExpression;
 import it.unive.lisa.symbolic.value.UnaryOperator;
@@ -18,33 +17,33 @@ import org.jetbrains.annotations.NotNull;
  * @since version date
  */
 public final class Simplifier {
-    
-    private Simplifier() {
-    
-    }
-    
+
+    private Simplifier() {}
+
     @NotNull
     public static Polynomial simplify(
         final SymbolicExpression expression,
         final int monomialCount
     ) {
         //noinspection ChainOfInstanceofChecks
-        if ((expression instanceof Constant constant) &&
-               (constant.getValue() instanceof Integer value)) {
+        if (
+            (expression instanceof Constant constant) &&
+            (constant.getValue() instanceof Integer value)
+        ) {
             return new Polynomial(monomialCount, value);
         }
         if (expression instanceof Variable variable) {
             return new Polynomial(monomialCount, variable, 1);
         }
-        if ((expression instanceof UnaryExpression unaryExpression) &&
-                (unaryExpression.getOperator() == UnaryOperator.NUMERIC_NEG)) {
-
+        if (
+            (expression instanceof UnaryExpression unaryExpression) &&
+            (unaryExpression.getOperator() == UnaryOperator.NUMERIC_NEG)
+        ) {
             final Polynomial result = Simplifier.simplify(
                 unaryExpression.getExpression(),
                 monomialCount
             );
-            result.invert();
-            return result;
+            return result.invert();
         }
         if (expression instanceof BinaryExpression binaryExpression) {
             final Polynomial left = Simplifier.simplify(binaryExpression.getLeft(), monomialCount);
@@ -63,33 +62,27 @@ public final class Simplifier {
             // result;
             switch (binaryExpression.getOperator()) {
                 case NUMERIC_DIV:
-                    if (!right.isConstant()) {
+                    if (!right.isConstantPolynomial()) {
                         return Polynomial.INVALID;
                     }
-                    left.divide(right.getConstant());
-                    return left;
+                    return left.divide(right.getConstantCoefficient());
                 case NUMERIC_MOD:
-                    if (!right.isConstant()) {
+                    if (!right.isConstantPolynomial()) {
                         return Polynomial.INVALID;
                     }
-                    left.modulo(right.getConstant());
-                    return left;
+                    return left.modulo(right.getConstantCoefficient());
                 case NUMERIC_MUL:
-                    if (left.isConstant()) {
-                        right.multiply(left.getConstant());
-                        return right;
+                    if (left.isConstantPolynomial()) {
+                        return right.multiply(left.getConstantCoefficient());
                     }
-                    if (right.isConstant()) {
-                        left.multiply(right.getConstant());
-                        return left;
+                    if (right.isConstantPolynomial()) {
+                        return left.multiply(right.getConstantCoefficient());
                     }
                     return Polynomial.INVALID;
                 case NUMERIC_ADD:
-                    left.add(right);
-                    return left;
+                    return left.add(right);
                 case NUMERIC_SUB:
-                    left.subtract(right);
-                    return left;
+                    return left.subtract(right);
                 default:
                     return Polynomial.INVALID;
             }

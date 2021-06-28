@@ -24,7 +24,7 @@ public class For<V extends Variable<V>> implements ForBlock<V> {
     @Override
     public ForWithInitializationBlock<V> initialization(String identifier, V... variables) {
     
-        return codeBlock.initialization(variables);
+        return codeBlock.initialization(identifier,variables);
     }
     
     @Override

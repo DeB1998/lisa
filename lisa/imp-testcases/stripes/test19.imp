@@ -1,0 +1,13 @@
+class test1 {
+    
+    test19() {
+        def a = 1;
+        def b = 9;
+        def i = 0;
+        for (; i < a; i = i+1) {
+            b = 10;
+            def c = 10;
+        }
+        return 4;
+    }
+}

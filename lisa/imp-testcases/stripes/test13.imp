@@ -1,0 +1,13 @@
+class test1 {
+    
+    test13() {
+    
+        def a = 10;
+        def b = 5;
+        def c = 1;
+        a = -2 * (b + c);
+        if (a - 2 * (b + c) > 0) {
+            def d = a + b; // a > 2(b+c)-1
+        }
+    }
+}

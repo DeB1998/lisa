@@ -12,94 +12,96 @@ import org.jetbrains.annotations.Nullable;
  * @since version date
  */
 public class Monomial {
-    
-    private int coefficient;
+
+    private final int coefficient;
+
     @Nullable
-    private Variable variable;
-    
+    private final Variable variable;
+
     Monomial(final int coefficient, @NotNull final Variable variable) {
-    
+        this(variable, coefficient);
+    }
+
+    private Monomial(@Nullable final Variable variable, final int coefficient) {
         this.coefficient = coefficient;
         this.variable = (coefficient == 0) ? null : variable;
     }
-    
+
     Monomial() {
-        
         this.coefficient = 0;
         this.variable = null;
     }
-    
-    Monomial(Monomial monomial) {
-        this.coefficient = monomial.coefficient;
-        this.variable = monomial.variable;
-    }
-    
+
     public int getCoefficient() {
-        
         return this.coefficient;
     }
-    
+
     @NotNull
     public Variable getVariable() {
-        
         if (this.variable == null) {
             throw new IllegalStateException("Null monomial!");
         }
-        
+
         return this.variable;
     }
-    
-    boolean tryAdd(@NotNull final Monomial otherMonomial) {
-        
-        if ((this.variable == null) || (otherMonomial.variable == null) || this.variable.equals(otherMonomial.variable)) {
-            if (this.variable == null) {
-                this.variable = otherMonomial.variable;
+
+    @Nullable
+    Monomial tryAdd(@NotNull final Monomial otherMonomial) {
+        final Monomial result = new Monomial();
+
+        if (
+            (this.variable == null) ||
+            (otherMonomial.variable == null) ||
+            this.variable.equals(otherMonomial.variable)
+        ) {
+            final int resultCoefficient = this.coefficient + otherMonomial.coefficient;
+            Variable resultVariable = this.variable;
+            if ((this.variable == null)) {
+                resultVariable = otherMonomial.variable;
             }
-            this.coefficient += otherMonomial.coefficient;
-            if (this.coefficient == 0) {
-                this.clear();
-            }
-            return true;
+
+            return new Monomial(resultVariable, resultCoefficient);
         }
-        return false;
+        return null;
     }
-    
-    void invert() {
-        this.coefficient = -this.coefficient;
+
+    @NotNull
+    Monomial invert() {
+        return new Monomial(this.variable, -this.coefficient);
     }
-    
-    void multiply(int constant) {
-        this.coefficient *= constant;
-        if (this.coefficient == 0) {
-            this.clear();
+
+    @NotNull
+    Monomial multiply(final int constant) {
+        final int resultCoefficient = this.coefficient * constant;
+        if (resultCoefficient == 0) {
+            return new Monomial();
         }
+        return new Monomial(this.variable, resultCoefficient);
     }
-    
-    void divide(int constant) {
-        this.coefficient /= constant;
+
+    @NotNull
+    Monomial divide(final int constant) {
+        if (constant == 0) {
+            throw new ArithmeticException("Monomial division by 0");
+        }
+        return new Monomial(this.variable, this.coefficient / constant);
     }
-    
-    void clear() {
-        
-        this.variable = null;
-        this.coefficient = 0;
-    }
-    
+
     public boolean isNull() {
         return (this.coefficient == 0) && (this.variable == null);
     }
-    
+
+    @NotNull
     @Override
     public String toString() {
-        
-        StringBuilder builder = new StringBuilder("Monomial { ");
-        
+        final StringBuilder builder = new StringBuilder("Monomial { ");
+
         if (this.variable == null) {
             builder.append("NULL ");
         } else {
             builder.append(this.coefficient).append(this.variable).append(" ");
         }
-        
+
         return builder.append('}').toString();
     }
 }

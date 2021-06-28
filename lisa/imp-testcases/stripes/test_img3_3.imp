@@ -1,0 +1,15 @@
+class TestImg3 {
+    
+    main3() {
+        def a = 10;
+        def b = 15;
+        def d = a + b + 7;
+        def e = a;
+        if ((a < e) ||
+                (!(d <= a + b) && e < a)) {
+            def c = 100;
+        } else {
+            def c = 50;
+        }
+    }
+}

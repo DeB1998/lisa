@@ -1,0 +1,23 @@
+class test1 {
+    test11() {
+        def a = 1;
+        def b = 2;
+        def c = 3;
+        def d = 10;
+        
+        for(def i = 0; i< c; i = i + 1) {
+            while(a + b > 0) {
+                if(d > 10) {
+                    d = d - 1;
+                    b = d;
+                    def e = a + b;
+                } else {
+                    def f = 5;
+                    def e = a + b;
+                }
+                def g = 3;
+            }
+        }
+    }
+    
+}

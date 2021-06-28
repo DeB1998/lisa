@@ -1,5 +1,5 @@
 class TestImg2 {
-    main() {
+/*    main() {
         def a = 5;
         def b = 3;
         def c = 7;
@@ -11,5 +11,14 @@ class TestImg2 {
             e = b;
             b = a + c;
         }
+    }*/
+    main() {
+        def a = 5;
+        def b = 3;
+        def c = 2*(a + b) + 1;
+        def d = c + 1;
+        def e = 2*d + 1;
+        def f = 4*d - 2;
+        def g = a - b;
     }
 }

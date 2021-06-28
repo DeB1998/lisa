@@ -1,17 +1,18 @@
 package it.unive.lisa.test.stripes;
 
-import static org.hamcrest.CoreMatchers.*;
-
+import it.unive.lisa.AnalysisException;
+import it.unive.lisa.imp.ParsingException;
 import it.unive.lisa.test.stripes.cfg.program.EndedProgram;
 import it.unive.lisa.test.stripes.cfg.program.For;
 import it.unive.lisa.test.stripes.cfg.program.If;
-import it.unive.lisa.test.stripes.cfg.program.IfBlockWithElse;
 import it.unive.lisa.test.stripes.cfg.program.Program;
 import it.unive.lisa.test.stripes.cfg.program.While;
 import java.io.IOException;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 
 /**
  * Description.
@@ -21,21 +22,26 @@ import org.junit.Test;
  * @since version date
  */
 @SuppressWarnings({ "DuplicateStringLiteralInspection", "StandardVariableNames" })
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class StripesDomainTestG {
 
     @Test
-    public void test1() throws IOException {
+    public void test01() throws IOException, ParsingException, AnalysisException {
         final Program<StripesVariable> program = new Program<>();
         final EndedProgram<StripesVariable> p = program
             .next("a = new int[5]", StripesVariable.TOP)
             .next("b = new int[3][3]", StripesVariable.TOP)
             .next("c = b[1][1]", StripesVariable.TOP)
             .returnProgram("return", StripesVariable.TOP);
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test1(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test1.imp",
+            "analysis___untyped_test1.test1(test1_this).dot"
+        );
     }
 
     @Test
-    public void test2() throws IOException {
+    public void test02() throws IOException, ParsingException, AnalysisException {
         final StripesVariable z = new StripesVariable("z");
         final StripesVariable y = new StripesVariable("y");
         final StripesVariable x = new StripesVariable("x");
@@ -75,11 +81,15 @@ public class StripesDomainTestG {
             .next("x = 2*x + 2* y", a, y)
             .next("x = 2*(x+y)", a, y)
             .returnProgram("return", a, y);
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test2(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test2.imp",
+            "analysis___untyped_test1.test2(test1_this).dot"
+        );
     }
 
     @Test
-    public void test3() throws IOException {
+    public void test03() throws IOException, ParsingException, AnalysisException {
         final StripesVariable y = new StripesVariable("y");
         final StripesVariable x = new StripesVariable("x");
         final StripesVariable a = new StripesVariable("a");
@@ -96,11 +106,15 @@ public class StripesDomainTestG {
             )
             .next("x = 2", a.remove(x), y.remove(x))
             .returnProgram("return 4", a, y);
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test3(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test3.imp",
+            "analysis___untyped_test1.test3(test1_this).dot"
+        );
     }
 
     @Test
-    public void test4() throws IOException {
+    public void test04() throws IOException, ParsingException, AnalysisException {
         final StripesVariable x = new StripesVariable("x");
         final StripesVariable y = new StripesVariable("y");
         final StripesVariable a = new StripesVariable("a");
@@ -115,14 +129,27 @@ public class StripesDomainTestG {
             .next("b = x + y + 3 + 5*x + 10*x + 10*y", StripesVariable.TOP)
             .next("c = 16 * x + 11 * y + 3", StripesVariable.TOP)
             .next("a = x + y + 3 + 5 * (2 * (x + y))", a.add(x, y, 11, 2))
-            .next("b = x + y + 3 + 10*x + 10*y", a, b.add(x, y, 11, 2))
-            .next("c = 11 * x + 11 * y + 3", a, b, c.add(x, y, 11, 2))
+            .next(
+                "b = x + y + 3 + 10*x + 10*y",
+                a.add(b, null, 1, -1),
+                b.add(x, y, 11, 2).add(a, null, 1, -1)
+            )
+            .next(
+                "c = 11 * x + 11 * y + 3",
+                a.add(c, null, 1, -1),
+                b.add(c, null, 1, -1),
+                c.add(x, y, 11, 2).add(a, null, 1, -1).add(b, null, 1, -1)
+            )
             .returnProgram("return", a, b, c);
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test4(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test4.imp",
+            "analysis___untyped_test1.test4(test1_this).dot"
+        );
     }
 
     @Test
-    public void test5() throws IOException {
+    public void test05() throws IOException, ParsingException, AnalysisException {
         final StripesVariable a = new StripesVariable("a");
         final StripesVariable b = new StripesVariable("b");
         final StripesVariable c = new StripesVariable("c");
@@ -145,11 +172,15 @@ public class StripesDomainTestG {
             .next("e[1] = 2", f)
             .next("k = e[0] + e[1] + 3", f)
             .returnProgram("return", f);
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test5(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test5.imp",
+            "analysis___untyped_test1.test5(test1_this).dot"
+        );
     }
 
     @Test
-    public void test6() throws IOException {
+    public void test06() throws IOException, ParsingException, AnalysisException {
         final StripesVariable c = new StripesVariable("c");
         final StripesVariable d = new StripesVariable("d");
         final StripesVariable e = new StripesVariable("e");
@@ -167,11 +198,15 @@ public class StripesDomainTestG {
             .next("i = 0", f)
             .next("e[i] = 0", f)
             .returnProgram("return", f);
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test6(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test6.imp",
+            "analysis___untyped_test1.test6(test1_this).dot"
+        );
     }
 
     @Test
-    public void test7() throws IOException {
+    public void test07() throws IOException, ParsingException, AnalysisException {
         final StripesVariable a = new StripesVariable("a");
         final StripesVariable b = new StripesVariable("b");
         final StripesVariable c = new StripesVariable("c");
@@ -199,14 +234,18 @@ public class StripesDomainTestG {
             .next("i = strsub(h, 1,3)", c, b)
             .next("j = (d || !e) && ((true && true) || (e || !d))", c, b)
             .next("k = !d", c, b)
-            .next("m = 2*b + 3", c, b, m.add(b, null, 2, 2))
+            .next("m = 2*b + 3", c, b, m.add(b, null, 2, 2).add(c, null, 2, 0))
             .next("l = new float[10][c]", c, b, m)
             .returnProgram("return", c, b, m);
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test7(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test7.imp",
+            "analysis___untyped_test1.test7(test1_this).dot"
+        );
     }
 
     @Test
-    public void test8() throws IOException {
+    public void test08() throws IOException, ParsingException, AnalysisException {
         final StripesVariable c = new StripesVariable("c");
         final StripesVariable d = new StripesVariable("d");
         final StripesVariable e = new StripesVariable("e");
@@ -255,11 +294,15 @@ public class StripesDomainTestG {
                     .next("f = 3", e)
             )
             .returnProgram("return", e.clearAndAdd(d, c, 2, 2));
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test8(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test8.imp",
+            "analysis___untyped_test1.test8(test1_this).dot"
+        );
     }
 
     @Test
-    public void test9() throws IOException {
+    public void test09() throws IOException, ParsingException, AnalysisException {
         final StripesVariable c = new StripesVariable("c");
         final StripesVariable d = new StripesVariable("d");
         final StripesVariable e = new StripesVariable("e");
@@ -277,11 +320,15 @@ public class StripesDomainTestG {
                     .next("f = (-d) - e", f.clearAndAdd(d, e, -1, -1))
             )
             .returnProgram("return", f.clearAndAdd(d, e, -1, -1));
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test9(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test9.imp",
+            "analysis___untyped_test1.test9(test1_this).dot"
+        );
     }
 
     @Test
-    public void test10() throws IOException {
+    public void test10() throws IOException, ParsingException, AnalysisException {
         final StripesVariable c = new StripesVariable("c");
         final StripesVariable d = new StripesVariable("d");
         final StripesVariable e = new StripesVariable("e");
@@ -299,11 +346,15 @@ public class StripesDomainTestG {
                     .next("f = (-d) - e", d, e, f.clearAndAdd(d, e, -1, -1))
             )
             .returnProgram("return", f.clearAndAdd(d, e, -1, -1));
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test10(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test10.imp",
+            "analysis___untyped_test1.test10(test1_this).dot"
+        );
     }
 
     @Test
-    public void test11() throws IOException {
+    public void test11() throws IOException, ParsingException, AnalysisException {
         final StripesVariable a = new StripesVariable("a");
         final StripesVariable b = new StripesVariable("b");
         final StripesVariable c = new StripesVariable("c");
@@ -349,11 +400,15 @@ public class StripesDomainTestG {
             )
             // i - c > -1
             .returnProgram("return", i.clearAndAdd(c, null, 1, -1));
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test11(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test11.imp",
+            "analysis___untyped_test1.test11(test1_this).dot"
+        );
     }
 
     @Test
-    public void test12() throws IOException {
+    public void test12() throws IOException, ParsingException, AnalysisException {
         final StripesVariable a = new StripesVariable("a");
         final StripesVariable b = new StripesVariable("b");
         final StripesVariable c = new StripesVariable("c");
@@ -410,7 +465,14 @@ public class StripesDomainTestG {
                             .next(
                                 new If<>("a != 0", d, e, g)
                                     .thenBlock()
-                                    .next("f = a + b + 1", d, e, f.clearAndAdd(a, b, 1, 0), g)
+                                    .next(
+                                        "f = a + b + 1",
+                                        d.add(f, null, 1, -2),
+                                        e,
+                                        f.clearAndAdd(a, b, 1, 0).add(d, null, 1, 0)
+                                            .add(g, null, 1, -3),
+                                        g.add(f, null, 1, 1)
+                                    )
                                     .elseBlock()
                                     .next("f = a + b + 10", d, e, f.clearAndAdd(a, b, 1, 9), g)
                                     .next("g = (3*d + 6)/3 + 1", d, e, f, g)
@@ -423,13 +485,21 @@ public class StripesDomainTestG {
                         g.clearAndAdd(d, null, 1, 0).add(a, b, 1, 0)
                     )
             )
-            .returnProgram("return", d.clearAndAdd(a, b, 1, -1), e.clearAndAdd(b, c, 1, -1),
-                    i.clearAndAdd(e, null, 1, -1));
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test12(test1_this).dot");
+            .returnProgram(
+                "return",
+                d.clearAndAdd(a, b, 1, -1),
+                e.clearAndAdd(b, c, 1, -1),
+                i.clearAndAdd(e, null, 1, -1).add(b, c, 1, -2) //TODO:?.add(b, c, 1, -1)
+            );
+        StripesDomainTest.checkProgram(
+            p,
+            "test12.imp",
+            "analysis___untyped_test1.test12(test1_this).dot"
+        );
     }
 
     @Test
-    public void test13() throws IOException {
+    public void test13() throws IOException, ParsingException, AnalysisException {
         final StripesVariable a = new StripesVariable("a");
         final StripesVariable b = new StripesVariable("b");
         final StripesVariable c = new StripesVariable("c");
@@ -447,11 +517,15 @@ public class StripesDomainTestG {
                     .next("d = a + b", a.add(b, c, 2, 0), d.clearAndAdd(a, b, 1, -1))
             )
             .returnProgram("return", a.clearAndAdd(b, c, -2, -1));
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test13(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test13.imp",
+            "analysis___untyped_test1.test13(test1_this).dot"
+        );
     }
 
     @Test
-    public void test14() throws IOException {
+    public void test14() throws IOException, ParsingException, AnalysisException {
         final StripesVariable x = new StripesVariable("x");
         final StripesVariable y = new StripesVariable("y");
         final StripesVariable z = new StripesVariable("z");
@@ -479,11 +553,15 @@ public class StripesDomainTestG {
                 b.add(c, null, 1, -1)
             )
             .returnProgram("return", x, y, a, b, c);
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test14(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test14.imp",
+            "analysis___untyped_test1.test14(test1_this).dot"
+        );
     }
 
     @Test
-    public void test15() throws IOException {
+    public void test15() throws IOException, ParsingException, AnalysisException {
         final StripesVariable x = new StripesVariable("x");
         final StripesVariable v1 = new StripesVariable("v1");
         final StripesVariable u = new StripesVariable("u");
@@ -499,11 +577,15 @@ public class StripesDomainTestG {
             .next("v1 = 2*x", v1.add(x, null, 2, -1))
             .next("x = u+v", v1.clearAndAdd(u, v, 2, -1), x.add(u, v, 1, -1))
             .returnProgram("return", v1, x);
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test15(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test15.imp",
+            "analysis___untyped_test1.test15(test1_this).dot"
+        );
     }
 
     @Test
-    public void test16() throws IOException {
+    public void test16() throws IOException, ParsingException, AnalysisException {
         final StripesVariable x = new StripesVariable("x");
         final StripesVariable u = new StripesVariable("u");
         final StripesVariable v = new StripesVariable("v");
@@ -515,11 +597,15 @@ public class StripesDomainTestG {
             .next("v = 1", StripesVariable.TOP)
             .next("x = u - v", u.add(x, v, 1, -1))
             .returnProgram("return", u);
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test16(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test16.imp",
+            "analysis___untyped_test1.test16(test1_this).dot"
+        );
     }
 
     @Test
-    public void test17() throws IOException {
+    public void test17() throws IOException, ParsingException, AnalysisException {
         final StripesVariable arrayLen = new StripesVariable("array_length");
         final StripesVariable i = new StripesVariable("i");
         final StripesVariable a = new StripesVariable("a");
@@ -555,11 +641,15 @@ public class StripesDomainTestG {
                     .next("c = 17", i, arrayLen, a.add(b, null, 1, 0))
             )
             .returnProgram("return", i, arrayLen);
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test17(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test17.imp",
+            "analysis___untyped_test1.test17(test1_this).dot"
+        );
     }
 
     @Test
-    public void test18() throws IOException {
+    public void test18() throws IOException, ParsingException, AnalysisException {
         final StripesVariable a = new StripesVariable("a");
         final StripesVariable b = new StripesVariable("b");
         final StripesVariable c = new StripesVariable("c");
@@ -578,13 +668,22 @@ public class StripesDomainTestG {
                             .thenBlock()
                             .next("d = 10", a.clearAndAdd(b, null, 1, 10))
                     )
+                    .next(
+                        new If<>("a > b + 4", a.clearAndAdd(b, null, 1, 7))
+                            .thenBlock()
+                            .next("d = 10", a)
+                    )
             )
             .returnProgram("return", StripesVariable.TOP);
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test18(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test18.imp",
+            "analysis___untyped_test1.test18(test1_this).dot"
+        );
     }
 
     @Test
-    public void test19() throws IOException {
+    public void test19() throws IOException, ParsingException, AnalysisException {
         final StripesVariable a = new StripesVariable("a");
         final StripesVariable b = new StripesVariable("b");
         final StripesVariable c = new StripesVariable("c");
@@ -603,7 +702,11 @@ public class StripesDomainTestG {
                     .increment("i = i + 1", StripesVariable.TOP)
             )
             .returnProgram("return", i.clearAndAdd(a, null, 1, -1));
-        StripesDomainTest.checkProgram(p, "analysis___untyped_test1.test19(test1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test19.imp",
+            "analysis___untyped_test1.test19(test1_this).dot"
+        );
     }
 
     /*
@@ -615,7 +718,7 @@ public class StripesDomainTestG {
     }*/
 
     @Test
-    public void testImg1() throws IOException {
+    public void testImg1() throws IOException, ParsingException, AnalysisException {
         final StripesVariable a = new StripesVariable("a");
         final StripesVariable b = new StripesVariable("b");
         final StripesVariable c = new StripesVariable("c");
@@ -635,11 +738,15 @@ public class StripesDomainTestG {
                     .next("c = 0", b.clearAndAdd(a, null, 1, -1))
             )
             .returnProgram("return c", StripesVariable.TOP);
-        StripesDomainTest.checkProgram(p, "analysis___untyped_TestImg1.main(TestImg1_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test_img1.imp",
+            "analysis___untyped_TestImg1.main(TestImg1_this).dot"
+        );
     }
 
     @Test
-    public void testImg2() throws IOException {
+    public void testImg2() throws IOException, ParsingException, AnalysisException {
         final StripesVariable a = new StripesVariable("a");
         final StripesVariable b = new StripesVariable("b");
         final StripesVariable c = new StripesVariable("c");
@@ -648,7 +755,7 @@ public class StripesDomainTestG {
         final StripesVariable f = new StripesVariable("f");
 
         //noinspection ConstantConditions
-        Assert.assertThat("To implement!", false, is(true));
+        //Assert.assertThat("To implement!", false, CoreMatchers.is(true));
 
         final Program<StripesVariable> program = new Program<>();
         final EndedProgram<StripesVariable> p = program
@@ -687,11 +794,52 @@ public class StripesDomainTestG {
             )
             .returnProgram("return");
 
-        StripesDomainTest.checkProgram(p, "analysis___untyped_TestImg2.main(TestImg2_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test_img2.imp",
+            "analysis___untyped_TestImg2.main(TestImg2_this).dot"
+        );
     }
-
+    
     @Test
-    public void testImg3_1() throws IOException {
+    public void testImg3() throws IOException, ParsingException, AnalysisException {
+        final StripesVariable a = new StripesVariable("a");
+        final StripesVariable b = new StripesVariable("b");
+        final StripesVariable c = new StripesVariable("c");
+        
+        final Program<StripesVariable> program = new Program<>();
+        final EndedProgram<StripesVariable> p = program
+                .next("a = 10", StripesVariable.TOP)
+                .next("b = 5", StripesVariable.TOP)
+                .next(
+                        new If<>("a > b", StripesVariable.TOP)
+                                .thenBlock()
+                                .next(
+                                        new While<>("b != a", a.add(b, null, 1, 0))
+                                                .next(
+                                                        "c = b + 1",
+                                                        a.add(c, null, 1, -1),
+                                                        c.clearAndAdd(b, null, 1, 0),
+                                                        b.add(c, null, 1, -2)
+                                                )
+                                )
+                        // c = b + 1
+                        // a > b
+                        // a + 1 > b + 1
+                        // a + 1 > c
+                        // a - c > -1
+                )
+                // b > a -1
+                .returnProgram("return", b.clearAndAdd(a, null, 1, -1));
+        StripesDomainTest.checkProgram(
+                p,
+                "test_img3.imp",
+                "analysis___untyped_TestImg3.main1(TestImg3_this).dot"
+        );
+    }
+    
+    @Test
+    public void testImg3_1() throws IOException, ParsingException, AnalysisException {
         final StripesVariable a = new StripesVariable("a");
         final StripesVariable b = new StripesVariable("b");
         final StripesVariable c = new StripesVariable("c");
@@ -720,11 +868,15 @@ public class StripesDomainTestG {
             )
             // b > a -1
             .returnProgram("return", b.clearAndAdd(a, null, 1, -1));
-        StripesDomainTest.checkProgram(p, "analysis___untyped_TestImg3.main1(TestImg3_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test_img3_1.imp",
+            "analysis___untyped_TestImg3.main1(TestImg3_this).dot"
+        );
     }
 
     @Test
-    public void testImg3_2() throws IOException {
+    public void testImg3_2() throws IOException, ParsingException, AnalysisException {
         final StripesVariable a = new StripesVariable("a");
         final StripesVariable b = new StripesVariable("b");
         final StripesVariable c = new StripesVariable("c");
@@ -752,11 +904,15 @@ public class StripesDomainTestG {
             )
             // i >= a
             .returnProgram("return", d, i.clearAndAdd(a, null, 1, -1));
-        StripesDomainTest.checkProgram(p, "analysis___untyped_TestImg3.main2(TestImg3_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test_img3_2.imp",
+            "analysis___untyped_TestImg3.main2(TestImg3_this).dot"
+        );
     }
 
     @Test
-    public void testImg3_3() throws IOException {
+    public void testImg3_3() throws IOException, ParsingException, AnalysisException {
         final StripesVariable a = new StripesVariable("a");
         final StripesVariable b = new StripesVariable("b");
         final StripesVariable c = new StripesVariable("c");
@@ -782,6 +938,10 @@ public class StripesDomainTestG {
                     .next("c = 50", d, e, a)
             )
             .returnProgram("return", d, e, a);
-        StripesDomainTest.checkProgram(p, "analysis___untyped_TestImg3.main3(TestImg3_this).dot");
+        StripesDomainTest.checkProgram(
+            p,
+            "test_img3_3.imp",
+            "analysis___untyped_TestImg3.main3(TestImg3_this).dot"
+        );
     }
 }

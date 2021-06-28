@@ -1,20 +1,19 @@
-package it.unive.lisa.analysis.nonrelational.value.stripes;
+package it.unive.lisa.test.stripes.simplifier;
 
 import it.unive.lisa.analysis.SemanticDomain.Satisfiability;
-import it.unive.lisa.analysis.nonrelational.value.stripes.polinomial.Monomial;
-import it.unive.lisa.analysis.nonrelational.value.stripes.polinomial.Polynomial;
 import it.unive.lisa.symbolic.SymbolicExpression;
 import it.unive.lisa.symbolic.value.BinaryExpression;
 import it.unive.lisa.symbolic.value.BinaryOperator;
 import it.unive.lisa.symbolic.value.UnaryExpression;
 import it.unive.lisa.symbolic.value.UnaryOperator;
 import it.unive.lisa.symbolic.value.Variable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Description.
@@ -23,20 +22,20 @@ import org.jetbrains.annotations.Nullable;
  * @version 1.0 2021-06-17
  * @since version date
  */
-class Normalizer {
+class OldNormalizer {
 
     public static Satisfiability normalizeCondition(
         final SymbolicExpression expression,
-        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> oldConstraints,
-        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newConstraints
+        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> oldConstraints,
+        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> newConstraints
     ) {
-        return Normalizer.normalizeCondition(expression, oldConstraints, newConstraints, false);
+        return OldNormalizer.normalizeCondition(expression, oldConstraints, newConstraints, false);
     }
 
     private static Satisfiability normalizeCondition(
         final SymbolicExpression expression,
-        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> oldConstraints,
-        @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newConstraints,
+        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> oldConstraints,
+        @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> newConstraints,
         final boolean complement
     ) {
         //noinspection ChainOfInstanceofChecks
@@ -44,7 +43,7 @@ class Normalizer {
             (expression instanceof UnaryExpression unaryExpression) &&
             (unaryExpression.getOperator() == UnaryOperator.LOGICAL_NOT)
         ) {
-            final Satisfiability result = Normalizer.normalizeCondition(
+            final Satisfiability result = OldNormalizer.normalizeCondition(
                 unaryExpression.getExpression(),
                 oldConstraints,
                 newConstraints,
@@ -60,15 +59,15 @@ class Normalizer {
             if (
                 (operator == BinaryOperator.LOGICAL_AND) || (operator == BinaryOperator.LOGICAL_OR)
             ) {
-                final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> leftConstraints = new HashMap<>();
-                final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> rightConstraints = new HashMap<>();
-                final Satisfiability leftCondition = Normalizer.normalizeCondition(
+                final Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> leftConstraints = new HashMap<>();
+                final Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> rightConstraints = new HashMap<>();
+                final Satisfiability leftCondition = OldNormalizer.normalizeCondition(
                     binaryExpression.getLeft(),
                     oldConstraints,
                     leftConstraints,
                     complement
                 );
-                final Satisfiability rightCondition = Normalizer.normalizeCondition(
+                final Satisfiability rightCondition = OldNormalizer.normalizeCondition(
                     binaryExpression.getRight(),
                     oldConstraints,
                     rightConstraints,
@@ -87,7 +86,7 @@ class Normalizer {
                             return Satisfiability.NOT_SATISFIED;
                         }
                         if (rightCondition == Satisfiability.UNKNOWN) {
-                            Utils.mergeConstraints(newConstraints, rightConstraints);
+                            OldUtils.mergeConstraints(newConstraints, rightConstraints);
                             return Satisfiability.UNKNOWN;
                         }
                     }
@@ -97,8 +96,8 @@ class Normalizer {
                     if (rightCondition == Satisfiability.NOT_SATISFIED) {
                         return Satisfiability.NOT_SATISFIED;
                     }
-                    Utils.mergeConstraints(newConstraints, leftConstraints);
-                    Utils.mergeConstraints(newConstraints, rightConstraints);
+                    OldUtils.mergeConstraints(newConstraints, leftConstraints);
+                    OldUtils.mergeConstraints(newConstraints, rightConstraints);
                     return Satisfiability.UNKNOWN;
                 }
                 //if ((operator == BinaryOperator.LOGICAL_OR && !complement) || (operator == BinaryOperator.LOGICAL_AND && complement)) {
@@ -106,19 +105,19 @@ class Normalizer {
                     return Satisfiability.SATISFIED;
                 }
                 if (leftCondition == Satisfiability.NOT_SATISFIED) {
-                    Utils.mergeConstraints(newConstraints, rightConstraints);
+                    OldUtils.mergeConstraints(newConstraints, rightConstraints);
                     return rightCondition;
                 }
                 if (rightCondition == Satisfiability.SATISFIED) {
                     return Satisfiability.SATISFIED;
                 }
                 if (rightCondition == Satisfiability.NOT_SATISFIED) {
-                    Utils.mergeConstraints(newConstraints, leftConstraints);
+                    OldUtils.mergeConstraints(newConstraints, leftConstraints);
                 }
                 return Satisfiability.UNKNOWN;
                 // }
             }
-            return Normalizer.normalizeExpression(
+            return OldNormalizer.normalizeExpression(
                 binaryExpression,
                 oldConstraints,
                 newConstraints,
@@ -130,35 +129,35 @@ class Normalizer {
 
     private static Satisfiability normalizeExpression(
         final BinaryExpression expression,
-        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> oldConstraints,
-        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newConstraints,
+        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> oldConstraints,
+        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> newConstraints,
         final boolean complement
     ) {
-        final Polynomial leftPolynomial = Simplifier.simplify(expression.getLeft(), 3);
-        final Polynomial rightPolynomial = Simplifier.simplify(expression.getRight(), 3);
-        final Polynomial one = new Polynomial(3, 1);
+        final OldPolynomial leftPolynomial = OldSimplifier2.simplify(expression.getLeft(), 3);
+        final OldPolynomial rightPolynomial = OldSimplifier2.simplify(expression.getRight(), 3);
+        final OldPolynomial one = new OldPolynomial(3, 1);
         if (leftPolynomial.isValid() && rightPolynomial.isValid()) {
             final BinaryOperator operator = expression.getOperator();
             if (
                 ((operator == BinaryOperator.COMPARISON_EQ) && !complement) ||
                 ((operator == BinaryOperator.COMPARISON_NE) && complement)
             ) {
-                final Polynomial first = new Polynomial(leftPolynomial);
+                final OldPolynomial first = new OldPolynomial(leftPolynomial);
                 first.subtract(rightPolynomial);
                 first.add(one);
-                final Polynomial second = new Polynomial(rightPolynomial);
+                final OldPolynomial second = new OldPolynomial(rightPolynomial);
                 second.subtract(leftPolynomial);
                 second.add(one);
 
-                final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> firstMap = new HashMap<>();
-                final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> secondMap = new HashMap<>();
+                final Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> firstMap = new HashMap<>();
+                final Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> secondMap = new HashMap<>();
 
-                final Satisfiability result1 = Normalizer.normalizePolynomial(
+                final Satisfiability result1 = OldNormalizer.normalizePolynomial(
                     first,
                     oldConstraints,
                     firstMap
                 );
-                final Satisfiability result2 = Normalizer.normalizePolynomial(
+                final Satisfiability result2 = OldNormalizer.normalizePolynomial(
                     second,
                     oldConstraints,
                     secondMap
@@ -172,7 +171,7 @@ class Normalizer {
                         return Satisfiability.NOT_SATISFIED;
                     }
                     if (result2 == Satisfiability.UNKNOWN) {
-                        Utils.mergeConstraints(newConstraints, firstMap);
+                        OldUtils.mergeConstraints(newConstraints, firstMap);
                         return Satisfiability.UNKNOWN;
                     }
                 }
@@ -183,8 +182,8 @@ class Normalizer {
                     if (result2 == Satisfiability.NOT_SATISFIED) {
                         return Satisfiability.NOT_SATISFIED;
                     }
-                    Utils.mergeConstraints(newConstraints, firstMap);
-                    Utils.mergeConstraints(newConstraints, secondMap);
+                    OldUtils.mergeConstraints(newConstraints, firstMap);
+                    OldUtils.mergeConstraints(newConstraints, secondMap);
                     return Satisfiability.UNKNOWN;
                 }
             }
@@ -192,20 +191,20 @@ class Normalizer {
                 ((operator == BinaryOperator.COMPARISON_NE) && !complement) ||
                 ((operator == BinaryOperator.COMPARISON_EQ) && complement)
             ) {
-                final Polynomial first = new Polynomial(leftPolynomial);
+                final OldPolynomial first = new OldPolynomial(leftPolynomial);
                 first.subtract(rightPolynomial);
-                final Polynomial second = new Polynomial(rightPolynomial);
+                final OldPolynomial second = new OldPolynomial(rightPolynomial);
                 second.subtract(leftPolynomial);
 
-                final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> firstMap = new HashMap<>();
-                final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> secondMap = new HashMap<>();
+                final Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> firstMap = new HashMap<>();
+                final Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> secondMap = new HashMap<>();
 
-                final Satisfiability result1 = Normalizer.normalizePolynomial(
+                final Satisfiability result1 = OldNormalizer.normalizePolynomial(
                     first,
                     oldConstraints,
                     firstMap
                 );
-                final Satisfiability result2 = Normalizer.normalizePolynomial(
+                final Satisfiability result2 = OldNormalizer.normalizePolynomial(
                     second,
                     oldConstraints,
                     secondMap
@@ -215,7 +214,7 @@ class Normalizer {
                     return Satisfiability.SATISFIED;
                 }
                 if (result1 == Satisfiability.NOT_SATISFIED) {
-                    Utils.mergeConstraints(newConstraints, secondMap);
+                    OldUtils.mergeConstraints(newConstraints, secondMap);
                     return result2;
                 }
                 if (result1 == Satisfiability.UNKNOWN) {
@@ -223,12 +222,12 @@ class Normalizer {
                         return Satisfiability.SATISFIED;
                     }
                     if (result2 == Satisfiability.NOT_SATISFIED) {
-                        Utils.mergeConstraints(newConstraints, firstMap);
+                        OldUtils.mergeConstraints(newConstraints, firstMap);
                     }
                     return result2;
                 }
             }
-            Polynomial polynomialToCheck = null;
+            OldPolynomial polynomialToCheck = null;
             if (
                 ((operator == BinaryOperator.COMPARISON_LT) && !complement) ||
                 ((operator == BinaryOperator.COMPARISON_GE) && complement)
@@ -237,7 +236,7 @@ class Normalizer {
                 // i < arr_len --> arr_len > i --> arr_len - i > 0
 
                 // a < b ---> b > a ---> b - a > 0
-                polynomialToCheck = new Polynomial(rightPolynomial);
+                polynomialToCheck = new OldPolynomial(rightPolynomial);
                 polynomialToCheck.subtract(leftPolynomial);
             }
             if (
@@ -246,7 +245,7 @@ class Normalizer {
             ) {
                 // a >= b --> a-b >= 0 --> a-b > -1 --> a - b + 1 > 0
 
-                polynomialToCheck = new Polynomial(leftPolynomial);
+                polynomialToCheck = new OldPolynomial(leftPolynomial);
                 polynomialToCheck.subtract(rightPolynomial);
                 polynomialToCheck.add(one);
             }
@@ -255,7 +254,7 @@ class Normalizer {
                 ((operator == BinaryOperator.COMPARISON_GT) && complement)
             ) {
                 // a <= b --> b >= a ---> b - a >= 0 --> b - a > -1 --> b-a+1 > 0
-                polynomialToCheck = new Polynomial(rightPolynomial);
+                polynomialToCheck = new OldPolynomial(rightPolynomial);
                 polynomialToCheck.subtract(leftPolynomial);
                 polynomialToCheck.add(one);
             }
@@ -264,11 +263,11 @@ class Normalizer {
                 ((expression.getOperator() == BinaryOperator.COMPARISON_LE) && complement)
             ) {
                 // a > b --> a - b > 0
-                polynomialToCheck = new Polynomial(leftPolynomial);
+                polynomialToCheck = new OldPolynomial(leftPolynomial);
                 polynomialToCheck.subtract(rightPolynomial);
             }
             if (polynomialToCheck != null) {
-                return Normalizer.normalizePolynomial(
+                return OldNormalizer.normalizePolynomial(
                     polynomialToCheck,
                     oldConstraints,
                     newConstraints
@@ -279,15 +278,15 @@ class Normalizer {
     }
 
     private static Satisfiability normalizePolynomial(
-        final Polynomial polynomialToNormalize,
-        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> oldConstraints,
-        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newConstraints
+        final OldPolynomial polynomialToNormalize,
+        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> oldConstraints,
+        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> newConstraints
     ) {
         if (polynomialToNormalize.isValid() && (polynomialToNormalize.getSize() >= 2)) {
-            final Monomial a = polynomialToNormalize.getMonomial(0);
-            final Monomial b = polynomialToNormalize.getMonomial(1);
+            final OldMonomial a = polynomialToNormalize.getMonomial(0);
+            final OldMonomial b = polynomialToNormalize.getMonomial(1);
             @Nullable
-            final Monomial c = (polynomialToNormalize.getSize() == 2)
+            final OldMonomial c = (polynomialToNormalize.getSize() == 2)
                 ? null
                 : polynomialToNormalize.getMonomial(2);
             final int constant = polynomialToNormalize.getConstant();
@@ -295,7 +294,7 @@ class Normalizer {
             if ((a != null) && (b != null)) {
                 if (c == null) {
                     if (a.getCoefficient() == 1) {
-                        final Satisfiability result = Normalizer.checkExpression(
+                        final Satisfiability result = OldNormalizer.checkExpression(
                             a.getVariable(),
                             b.getVariable(),
                             null,
@@ -305,7 +304,7 @@ class Normalizer {
                             newConstraints
                         );
                         if ((result != Satisfiability.SATISFIED) && (b.getCoefficient() == 1)) {
-                            final Satisfiability result2 = Normalizer.checkExpression(
+                            final Satisfiability result2 = OldNormalizer.checkExpression(
                                 b.getVariable(),
                                 a.getVariable(),
                                 null,
@@ -334,7 +333,7 @@ class Normalizer {
                         return result;
                     } // end a.getCoeff() == 1
                     if (b.getCoefficient() == 1) {
-                        return Normalizer.checkExpression(
+                        return OldNormalizer.checkExpression(
                             b.getVariable(),
                             a.getVariable(),
                             null,
@@ -349,7 +348,7 @@ class Normalizer {
                 // end c == null
                 if (a.getCoefficient() == 1) {
                     if (b.getCoefficient() == c.getCoefficient()) {
-                        final Satisfiability result1 = Normalizer.checkExpression(
+                        final Satisfiability result1 = OldNormalizer.checkExpression(
                             a.getVariable(),
                             b.getVariable(),
                             c.getVariable(),
@@ -359,7 +358,7 @@ class Normalizer {
                             newConstraints
                         );
                         if ((result1 != Satisfiability.SATISFIED) && (b.getCoefficient() == 1)) {
-                            final Satisfiability result2 = Normalizer.checkExpression(
+                            final Satisfiability result2 = OldNormalizer.checkExpression(
                                 b.getVariable(),
                                 a.getVariable(),
                                 c.getVariable(),
@@ -369,7 +368,7 @@ class Normalizer {
                                 newConstraints
                             );
                             if (result2 != Satisfiability.SATISFIED) {
-                                final Satisfiability result3 = Normalizer.checkExpression(
+                                final Satisfiability result3 = OldNormalizer.checkExpression(
                                     c.getVariable(),
                                     a.getVariable(),
                                     b.getVariable(),
@@ -423,7 +422,7 @@ class Normalizer {
                     return Satisfiability.UNKNOWN;
                 } // end a.getCoeff() == 1
                 if ((b.getCoefficient() == 1) && (a.getCoefficient() == c.getCoefficient())) {
-                    return Normalizer.checkExpression(
+                    return OldNormalizer.checkExpression(
                         b.getVariable(),
                         a.getVariable(),
                         c.getVariable(),
@@ -434,7 +433,7 @@ class Normalizer {
                     );
                 }
                 if ((c.getCoefficient() == 1) && (a.getCoefficient() == b.getCoefficient())) {
-                    return Normalizer.checkExpression(
+                    return OldNormalizer.checkExpression(
                         c.getVariable(),
                         a.getVariable(),
                         b.getVariable(),
@@ -455,10 +454,10 @@ class Normalizer {
         @Nullable final Variable z,
         final int k1,
         final int k2,
-        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> oldConstraints,
-        final @Nullable Map<? super @NotNull Variable, @NotNull Set<@NotNull Constraint>> newConstraints
+        final @NotNull Map<@NotNull Variable, @NotNull Set<@NotNull OldConstraint>> oldConstraints,
+        final @Nullable Map<? super @NotNull Variable, @NotNull Set<@NotNull OldConstraint>> newConstraints
     ) {
-        final boolean normalDirectionSatified = Normalizer.checkVariableConstraint(
+        final boolean normalDirectionSatified = OldNormalizer.checkVariableConstraint(
             x,
             y,
             z,
@@ -470,7 +469,7 @@ class Normalizer {
             return Satisfiability.SATISFIED;
         }
         if ((k1 == 1) && (z == null)) {
-            final boolean inverseDirectionSatisfied = Normalizer.checkVariableConstraint(
+            final boolean inverseDirectionSatisfied = OldNormalizer.checkVariableConstraint(
                 y,
                 x,
                 z,
@@ -483,7 +482,7 @@ class Normalizer {
             }
         }
         if (newConstraints != null) {
-            Utils.addConstraint(newConstraints, x, new Constraint(y, z, k1, k2));
+            OldUtils.addConstraint(newConstraints, x, new OldConstraint(y, z, k1, k2));
         }
 
         return Satisfiability.UNKNOWN;
@@ -495,7 +494,7 @@ class Normalizer {
         @Nullable final Variable z,
         final int k1,
         final int k2,
-        final @NotNull Map<@NotNull Variable, ? extends @NotNull Set<@NotNull Constraint>> oldConstraints
+        final @NotNull Map<@NotNull Variable, ? extends @NotNull Set<@NotNull OldConstraint>> oldConstraints
     ) {
         // arr_len - 1*(i) > 0
         // {i=[(array_length, ⊥, 1, -2)], array_length=[(i, ⊥, 1, 0)]}
@@ -506,9 +505,9 @@ class Normalizer {
         // i - 1*arr_len > 1
 
         @Nullable
-        final Set<@NotNull Constraint> constraints = oldConstraints.get(x);
+        final Set<@NotNull OldConstraint> constraints = oldConstraints.get(x);
         if (constraints != null) {
-            for (@NotNull final Constraint constraint : constraints) {
+            for (@NotNull final OldConstraint constraint : constraints) {
                 if (
                     constraint.getX().equals(y) &&
                     Objects.equals(constraint.getY(), z) &&

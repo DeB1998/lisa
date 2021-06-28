@@ -3,6 +3,7 @@ package it.unive.lisa.analysis.nonrelational.value.stripes.polinomial;
 import it.unive.lisa.symbolic.value.Variable;
 import java.util.Arrays;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Description.
@@ -16,54 +17,48 @@ public class Polynomial {
     public static final Polynomial INVALID = new Polynomial(false);
 
     @NotNull
-    private Monomial[] monomials;
+    private final Monomial[] monomials;
 
-    private int constant;
+    private final int constantCoefficient;
 
     private final int monomialCount;
 
-    private boolean isConstant;
+    private final boolean isConstantPolynomial;
 
-    private boolean valid;
+    private final boolean valid;
 
-    private int size;
-
-    public Polynomial(final int monomialCount, final int constant) {
-        this.monomials = new Monomial[monomialCount];
-        for (int i = 0; i < monomialCount; i++) {
-            this.monomials[i] = new Monomial();
-        }
-        this.constant = constant;
-        this.monomialCount = monomialCount;
-        this.isConstant = true;
-        this.valid = true;
-        this.size = 0;
-    }
-    
-    public Polynomial(final Polynomial polynomial) {
-    
-        this.monomials = new Monomial[polynomial.monomialCount];
-        for (int i = 0; i < polynomial.monomialCount; i++) {
-            this.monomials[i] = new Monomial(polynomial.monomials[i]);
-        }
-        this.constant = polynomial.constant;
-        this.monomialCount = polynomial.monomialCount;
-        this.isConstant = polynomial.isConstant;
-        this.valid = polynomial.valid;
-        this.size = polynomial.size;
+    public Polynomial(final int monomialCount, final int constantCoefficient) {
+        this(new Monomial[monomialCount], constantCoefficient, monomialCount, true);
+        Arrays.fill(this.monomials, new Monomial());
     }
 
     public Polynomial(final int monomialCount, final Variable variable, final int coefficient) {
-        this(monomialCount, 0);
-        final Monomial firstMonomial = new Monomial(coefficient, variable);
-        this.size = (firstMonomial.isNull()) ? 0 : 1;
-        this.monomials[0] = firstMonomial;
-        this.isConstant = false;
+        this(new Monomial[monomialCount], 0, monomialCount, coefficient == 0);
+        Arrays.fill(this.monomials, new Monomial());
+        this.monomials[0] = new Monomial(coefficient, variable);
     }
 
     private Polynomial(final boolean isValid) {
-        this(0, 0);
+        this.monomials = new Monomial[1];
+        //noinspection AssignmentToNull
+        this.monomials[0] = new Monomial();
+        this.constantCoefficient = 0;
+        this.monomialCount = 0;
+        this.isConstantPolynomial = false;
         this.valid = isValid;
+    }
+
+    Polynomial(
+        @NotNull final Monomial[] monomials,
+        final int constantCoefficient,
+        final int monomialCount,
+        final boolean isConstantPolynomial
+    ) {
+        this.monomials = monomials;
+        this.constantCoefficient = constantCoefficient;
+        this.monomialCount = monomialCount;
+        this.isConstantPolynomial = isConstantPolynomial;
+        this.valid = true;
     }
 
     public boolean isValid() {
@@ -72,25 +67,38 @@ public class Polynomial {
 
     public int getSize() {
         if (this.valid) {
-            return this.size;
+            int i = this.monomialCount - 1;
+            boolean found = false;
+            while ((i >= 0) && !found) {
+                if (!this.monomials[i].isNull()) {
+                    found = true;
+                } else {
+                    i--;
+                }
+            }
+            return i + 1;
         }
         throw new IllegalStateException("Null polynomial!");
     }
 
-    public boolean isConstant() {
-        return this.isConstant && this.valid;
+    public boolean isConstantPolynomial() {
+        return this.isConstantPolynomial && this.valid;
     }
 
-    public int getConstant() {
+    public int getConstantCoefficient() {
         if (this.valid) {
-            return this.constant;
+            return this.constantCoefficient;
         }
         throw new IllegalStateException("Null polynomial!");
     }
 
+    @NotNull
     public Monomial getMonomial(final int index) {
-        if (this.valid && (index >= 0) && (index < this.size)) {
-            return this.monomials[index];
+        if (this.valid && (index >= 0)) {
+            final Monomial requestedMonomial = this.monomials[index];
+            if (!requestedMonomial.isNull()) {
+                return requestedMonomial;
+            }
         }
         throw new IllegalArgumentException("Invalid index " + index);
     }
@@ -98,119 +106,160 @@ public class Polynomial {
     private boolean isDivisible(final int constant) {
         boolean isDivisible = constant != 0;
         int i = 0;
-        while ((i < this.size) && isDivisible) {
-            final Monomial monomial = this.monomials[i];
-            isDivisible = ((monomial.getCoefficient() % constant) == 0);
+        while ((i < this.monomialCount) && isDivisible) {
+            isDivisible = ((this.monomials[i].getCoefficient() % constant) == 0);
             i++;
         }
         return true;
     }
 
-    public void divide(final int constant) {
+    @NotNull
+    public Polynomial divide(final int constant) {
         if (this.valid && this.isDivisible(constant)) {
-            for (final Monomial monomial : this.monomials) {
-                monomial.divide(constant);
+            final Monomial[] newMonomials = new Monomial[this.monomialCount];
+            Arrays.fill(newMonomials, new Monomial());
+
+            for (int i = 0; i < this.monomialCount; i++) {
+                newMonomials[i] = this.monomials[i].divide(constant);
             }
-            this.constant /= constant;
-        } else {
-            this.valid = false;
+            final int newCoefficient = this.constantCoefficient / constant;
+            return new Polynomial(
+                newMonomials,
+                newCoefficient,
+                this.monomialCount,
+                this.isConstantPolynomial
+            );
         }
+
+        return Polynomial.INVALID;
     }
 
-    public void modulo(final int constant) {
+    @NotNull
+    public Polynomial modulo(final int constant) {
         if (this.valid && this.isDivisible(constant)) {
-            for (final Monomial monomial : this.monomials) {
-                monomial.clear();
-            }
-            this.isConstant = true;
-            this.size = 0;
-            this.constant %= constant;
-        } else {
-            this.valid = false;
+            final Monomial[] newMonomials = new Monomial[this.monomialCount];
+            Arrays.fill(newMonomials, new Monomial());
+
+            return new Polynomial(newMonomials, this.constantCoefficient % constant, 0, true);
         }
+        return Polynomial.INVALID;
     }
 
-    public void multiply(final int constant) {
+    @NotNull
+    public Polynomial multiply(final int constant) {
         if (this.valid) {
-            for (final Monomial monomial : this.monomials) {
-                monomial.multiply(constant);
+            final Monomial[] newMonomials = new Monomial[this.monomialCount];
+            Arrays.fill(newMonomials, new Monomial());
+
+            final boolean isNewPolynomialConstant = (this.isConstantPolynomial) || (constant == 0);
+            for (int i = 0; i < this.monomialCount; i++) {
+                if (!isNewPolynomialConstant) {
+                    newMonomials[i] = this.monomials[i].multiply(constant);
+                }
             }
-            this.constant *= constant;
-            // (3x + 3y + 7z + 7) * d = c
-            // 3 * d = c
-            this.isConstant = this.isConstant || (constant == 0);
-            this.size = (constant == 0) ? 0 : this.size;
+            final int newCoefficient = this.constantCoefficient * constant;
+
+            return new Polynomial(
+                newMonomials,
+                newCoefficient,
+                this.monomialCount,
+                isNewPolynomialConstant
+            );
         }
+        return Polynomial.INVALID;
     }
 
-    public void invert() {
+    @NotNull
+    public Polynomial invert() {
         // - (polyno)
         if (this.valid) {
-            for (final Monomial monomial : this.monomials) {
-                monomial.invert();
+            final Monomial[] newMonomials = new Monomial[this.monomialCount];
+            Arrays.fill(newMonomials, new Monomial());
+            for (int i = 0; i < this.monomialCount; i++) {
+                newMonomials[i] = this.monomials[i].invert();
             }
-            this.constant = -this.constant;
+            final int newConstantCoefficient = -this.constantCoefficient;
+            return new Polynomial(
+                newMonomials,
+                newConstantCoefficient,
+                this.monomialCount,
+                this.isConstantPolynomial
+            );
         }
+        return Polynomial.INVALID;
     }
 
-    public void add(final Polynomial otherPolynomial) {
+    @NotNull
+    public Polynomial add(final Polynomial otherPolynomial) {
         if (this.valid && otherPolynomial.valid) {
+            final Monomial[] newMonomials = new Monomial[this.monomialCount];
+            Arrays.fill(newMonomials, new Monomial());
+
             final boolean[] monomialAdded = new boolean[otherPolynomial.monomialCount];
-            int newSize = 0;
-            for (final Monomial monomial : this.monomials) {
+            int nextMonomialIndex = 0;
+            for (int i = 0; i < this.monomialCount; i++) {
+                //final Monomial monomial : this.monomials
                 boolean added = false;
-                int i = 0;
-                while (i < otherPolynomial.monomialCount && !added) {
-                    if (!monomialAdded[i]) {
-                        added = monomial.tryAdd(otherPolynomial.monomials[i]);
-                        if (added) {
-                            monomialAdded[i] = true;
+                int j = 0;
+                while ((j < otherPolynomial.monomialCount) && !added) {
+                    if (!monomialAdded[j]) {
+                        final Monomial result =
+                            this.monomials[i].tryAdd(otherPolynomial.monomials[j]);
+                        if ((result != null)) {
+                            if (!result.isNull()) {
+                                newMonomials[nextMonomialIndex] = result;
+                                nextMonomialIndex++;
+                            }
+                            monomialAdded[j] = true;
+                            added = true;
                         }
                     }
-                    i++;
-                }
-                if (!added) {
-                    this.valid = false;
-                } else {
-                    newSize += (monomial.isNull()) ? 0 : 1;
-                }
-            }
-            this.constant += otherPolynomial.constant;
-            this.isConstant = newSize == 0;
-
-            final Monomial[] newMonomials = new Monomial[this.monomialCount];
-            int j = 0;
-            for (int i = 0; i < newSize; i++) {
-                if (!this.monomials[i].isNull()) {
-                    newMonomials[j] = this.monomials[i];
                     j++;
                 }
+                if (!added) {
+                    return Polynomial.INVALID;
+                }
             }
-            for (; j < this.monomialCount; j++) {
-                newMonomials[j] = new Monomial();
-            }
-            this.size = newSize;
-            this.monomials = newMonomials;
-        } else {
-            this.valid = false;
+            final int newCoefficient =
+                this.constantCoefficient + otherPolynomial.constantCoefficient;
+
+            final boolean isNewPolynomialConstant = newMonomials[0].isNull();
+
+            return new Polynomial(
+                newMonomials,
+                newCoefficient,
+                this.monomialCount,
+                isNewPolynomialConstant
+            );
         }
+        return Polynomial.INVALID;
     }
 
-    public void subtract(final Polynomial otherPolynomial) {
-        this.invert();
-        this.add(otherPolynomial);
-        this.invert();
+    @NotNull
+    public Polynomial subtract(final Polynomial otherPolynomial) {
+        return this.invert().add(otherPolynomial).invert();
     }
 
+    @NotNull
     @Override
     public String toString() {
+        int size = 0;
+        boolean found = false;
+        while ((size < this.monomialCount) && !found) {
+            if (this.monomials[size].isNull()) {
+                found = true;
+            } else {
+                size++;
+            }
+        }
+
         final StringBuilder builder = new StringBuilder("Polynomial[");
-        builder.append(this.size).append("/").append(this.monomialCount).append("]").append(" { ");
+        builder.append(size).append("/").append(this.monomialCount).append("]").append(" { ");
         if (this.valid) {
             boolean first = true;
             for (final Monomial monomial : this.monomials) {
                 if (!monomial.isNull()) {
-                    if (monomial.getCoefficient() >= 0 && !first) {
+                    if ((monomial.getCoefficient() >= 0) && !first) {
                         builder.append(" + ");
                     } else {
                         if (monomial.getCoefficient() < 0) {
@@ -220,26 +269,28 @@ public class Polynomial {
                             builder.append(" ");
                         }
                     }
-                    builder.append(Math.abs(monomial.getCoefficient())).append(monomial.getVariable());
+                    builder
+                        .append(Math.abs(monomial.getCoefficient()))
+                        .append(monomial.getVariable());
                     first = false;
                 }
             }
-            
-            if ((this.constant >= 0) && (this.size >= 0) && !first) {
+
+            if ((this.constantCoefficient >= 0) && !first) {
                 builder.append(" + ");
-            } else if (this.constant < 0) {
+            } else if (this.constantCoefficient < 0) {
                 builder.append(" - ");
             }
-            
-            builder.append(Math.abs(this.constant));
+
+            builder.append(Math.abs(this.constantCoefficient));
             builder.append(" }");
-            if (this.isConstant) {
+            if (this.isConstantPolynomial) {
                 builder.append(" : const");
             }
         } else {
             builder.append("INVALID}");
         }
-        
+
         return builder.toString();
     }
 }
