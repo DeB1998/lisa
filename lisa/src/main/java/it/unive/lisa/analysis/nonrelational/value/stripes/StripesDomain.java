@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Unmodifiable;
  *
  * @author Alessio De Biasi
  * @author Jonathan Gobbo
- * @version 1.5.1 2021-06-30
+ * @version 1.6 2021-06-30
  * @since 1.5 2021-04-17
  */
 public class StripesDomain
@@ -360,7 +360,8 @@ public class StripesDomain
                             assignedVariable,
                             firstMonomial,
                             secondMonomial,
-                            constant
+                            constant,
+                            this.trackedConstraints
                         )
                     );
                     // Merge the inferred constraints
@@ -374,13 +375,13 @@ public class StripesDomain
                 if (secondMonomial != null) {
                     // Extract the new constraints
                     newTrackedConstraints =
-                        StripesDomain.handleExceptionAssignment(
-                            assignedVariable,
-                            newTrackedConstraints,
-                            firstMonomial,
-                            secondMonomial,
-                            constant
-                        );
+                        this.handleExceptionAssignment(
+                                assignedVariable,
+                                newTrackedConstraints,
+                                firstMonomial,
+                                secondMonomial,
+                                constant
+                            );
                 }
             }
             // Return the new domain element
@@ -405,7 +406,7 @@ public class StripesDomain
      * @return The new tracked constraints extracted from the assignment.
      */
     @SuppressWarnings("FeatureEnvy")
-    private static Map<@NotNull Variable,
+    private Map<@NotNull Variable,
             @Unmodifiable @NotNull Set<@NotNull Constraint>> handleExceptionAssignment(
         final Variable assignedVariable,
         final Map<@NotNull Variable,
@@ -445,7 +446,8 @@ public class StripesDomain
                     assignedVariable,
                     firstMonomial,
                     secondMonomial,
-                    constant
+                    constant,
+                    this.trackedConstraints
                 )
             );
             // Return the merged constraints

@@ -1,15 +1,23 @@
 class test1 {
     test2() {
         def z = 9;
-        def y = 0;
+        def y = 10;
         def x = y;
         x = -3;
-        def a = y;
-        def b = x;
+        def a = y; // a = 10
+        def b = x; // b = 10
         
-        x = y;
-        x = -y; // x = -a x+a > -1 x-(-1)*a > -1           a = -x   a - (-1)*x >-1
-        x = y + z; // y=a --> x = a+z
+        x = y; // b = y , x = a                                                         x = 10
+        x = -y; // x = -a x+a > -1 x-(-1)*a > -1           a = -x   a - (-1)*x >-1      x = -10
+                // x = -b ----> b = -x
+                // x = -a ----> a = -x
+                // a +y > -1     a = -y
+        
+                // a > -y-1   a >= -y
+                // a > y-1    a >= y
+        x = y + z; // y=a --> x = a+z   a > y+z                                         x = 10 + 9=19
+                   // a = y, x = -y --> x = -a --> a = -x
+                   // a > -y -z
         x = 2*y; // x = 2*a
         x = 2*y+2*z;
         x = y+y;

@@ -57,6 +57,7 @@ public class StripesDomainTestG {
             .next(
                 "x = y",
                 a.add(x, null, 1, -1),
+                b.clearAndAdd(y, null, 1, -1),
                 y.add(x, null, 1, -1),
                 x.remove(b).add(y, null, 1, -1).add(a, null, 1, -1)
             )
@@ -68,7 +69,7 @@ public class StripesDomainTestG {
             )
             .next(
                 "x = y + z",
-                a.remove(x),
+                a.remove(x).add(y, z, -1, -1),
                 y.remove(x),
                 x.clearAndAdd(y, z, 1, -1).add(a, z, 1, -1)
             )
@@ -350,7 +351,12 @@ public class StripesDomainTestG {
             .next("f = (-d) - e (FIRST)", e, f.clearAndAdd(d, e, -1, -1))
             .next(
                 new While<>("c > 0", f)
-                    .next("d = e - 1", d.clearAndAdd(e, null, 1, -2), e.clearAndAdd(d, null, 1, 0))
+                    .next(
+                        "d = e - 1",
+                        d.clearAndAdd(e, null, 1, -2),
+                        e.clearAndAdd(d, null, 1, 0),
+                        f.clearAndAdd(e, null, -2, 0)
+                    )
                     .next(
                         "f = (-d) - e (SECOND)",
                         d,
@@ -601,6 +607,10 @@ public class StripesDomainTestG {
         final StripesVariable v1 = new StripesVariable("v1");
         final StripesVariable u = new StripesVariable("u");
         final StripesVariable v = new StripesVariable("v");
+        final StripesVariable a = new StripesVariable("a");
+        final StripesVariable b = new StripesVariable("b");
+        final StripesVariable c = new StripesVariable("c");
+        final StripesVariable d = new StripesVariable("d");
 
         final Program<StripesVariable> program = new Program<>();
         final EndedProgram<StripesVariable> p = program
@@ -609,9 +619,29 @@ public class StripesDomainTestG {
             .next("u = 1", StripesVariable.TOP)
             .next("v = 2", StripesVariable.TOP)
             .next("x = 0", StripesVariable.TOP)
-            .next("v1 = 2*x", v1.add(x, null, 2, -1))
-            .next("x = u+v", v1.clearAndAdd(u, v, 2, -1), x.add(u, v, 1, -1))
-            .returnProgram("return", v1, x);
+            .next("v1 = 2*x + 10", v1.add(x, null, 2, 9))
+            .next("x = u+v (FIRTS)", v1.clearAndAdd(u, v, 2, 9), x.clearAndAdd(u, v, 1, -1))
+            // x > u+v-1
+            // v1 > 40*(u+v-1) +10 --> 40*(u+v) -40+10
+            .next("v1 = 40*x + 10", v1.clearAndAdd(x, null, 40, 9).add(u, v, 40, -30), x)
+            // v1 > 40*(u+v)-30 ---> v1 > 40*x - 30
+            // x = u+v
+            .next(
+                "x = u + v (SECOND)",
+                v1.clearAndAdd(u, v, 40, 9).add(x, null, 40, -30),
+                x.clearAndAdd(u, v, 1, -1)
+            )
+            .next("a = 5", v1, x)
+            .next("b = 9", v1, x)
+            .next(
+                "c = b + 20",
+                v1,
+                x,
+                c.clearAndAdd(b, null, 1, 19),
+                b.clearAndAdd(c, null, 1, -21)
+            )
+            .next("d = 10 * (c+a) + 7", v1, x, c, b, d.clearAndAdd(c, a, 10, 6).add(b, a, 10, 206))
+            .returnProgram("return", v1, x, c, b, d);
         StripesDomainTest.checkProgram(
             p,
             "test15.imp",
@@ -771,7 +801,7 @@ public class StripesDomainTestG {
                         d,
                         b.clearAndAdd(a, d, 4, -1)
                     )
-                    .next("c = 2*a+2*b", a, b, c.clearAndAdd(a, b, 2, -1), d)
+                    .next("c = 2*a+2*b", a, b, c.clearAndAdd(a, b, 2, -41), d)
             )
             .returnProgram("return c", c);
         StripesDomainTest.checkProgram(
@@ -790,6 +820,7 @@ public class StripesDomainTestG {
         final StripesVariable e = new StripesVariable("e");
         final StripesVariable f = new StripesVariable("f");
         final StripesVariable g = new StripesVariable("g");
+        final StripesVariable v1 = new StripesVariable("v1");
 
         final Program<StripesVariable> program = new Program<>();
         final EndedProgram<StripesVariable> p = program
@@ -815,17 +846,17 @@ public class StripesDomainTestG {
             // 2*d+5 = -2*c+7
             // e = 2d+5
             .next("e = -2*(c) + 7", e.clearAndAdd(c, null, -2, 6).add(d, null, 2, 4), c, d)
-                // e = -2*(c)+7
-                // e > -2*c+6
-                // 2*e = -4*(c) + 14
-                
-                // e >= -2c+7 --> e > -2c+6
-                // e <= -2c+7 -2c + 7 >= e    -2c >= e-7   -2c > e-8
-                
-                //d = -c+1
-                // 4*d = -4*c + 4
-                // 4*d + 10 = -4*c+14
-                // f = 4*d + 10 --> f > 4d+9
+            // e = -2*(c)+7
+            // e > -2*c+6
+            // 2*e = -4*(c) + 14
+
+            // e >= -2c+7 --> e > -2c+6
+            // e <= -2c+7 -2c + 7 >= e    -2c >= e-7   -2c > e-8
+
+            //d = -c+1
+            // 4*d = -4*c + 4
+            // 4*d + 10 = -4*c+14
+            // f = 4*d + 10 --> f > 4d+9
             .next(
                 "f = -4*(c) + 14",
                 f
@@ -834,11 +865,21 @@ public class StripesDomainTestG {
                     .add(d, null, 4, 9),
                 c,
                 d,
-                    e
+                e
             )
-                // g = a-b ---> b+g=a --> a = b+g
-            .next("g = a - b", a.clearAndAdd(b, g, 1, -1), f, c, d, e)
-            .returnProgram("return", a, c, d, e, f);
+            // g = a-b ---> b+g=a --> a = b+g
+            .next("g = a - b - 4", a.clearAndAdd(b, g, 1, 3), f, c, d, e)
+            .next(
+                "v1 = a",
+                v1.clearAndAdd(a, null, 1, -1).add(b, g, 1, 3),
+                a.add(v1, null, 1, -1),
+                f,
+                c.add(v1, b,2, 0),
+                d,
+                e
+            )
+            .next("a = b+c", a.clearAndAdd(b, c, 1, -1), v1.remove(a).add(b, c, 1, -1), f, c.remove(a), d, e)
+            .returnProgram("return", a, c, d, e, f, v1);
 
         StripesDomainTest.checkProgram(
             p,

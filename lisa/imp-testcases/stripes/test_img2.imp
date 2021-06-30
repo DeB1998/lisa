@@ -3,10 +3,11 @@ class TestImg2 {
         def a = 5;
         def b = 3;
         def c = 2*(a + b) + 1;
-        //
         def d = (-c) + 1;
         def e = 2*(-c) + 7;
         def f = 4*(-c) + 14;
-        def g = a - b;
+        def g = a - b - 4;
+        def v1 = a;
+        a = b+c;
     }
 }

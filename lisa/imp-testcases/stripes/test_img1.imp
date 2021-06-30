@@ -10,7 +10,7 @@ class TestImg1{
                 c = c+1;
             }
             b = 4*(a + d);
-            c = 2*a+2*b;
+            c = 2*a+2*b - 40;
         }
         return c;
     }

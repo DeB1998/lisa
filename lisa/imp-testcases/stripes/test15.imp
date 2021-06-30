@@ -7,7 +7,18 @@ class test1 {
         def v = 2;
 
         x = 0;
-        v1 = 2*x;
+        v1 = 2*x + 10;
         x = u+v;
+    
+        v1 = 40*x + 10;
+        x = u + v;
+        
+        def a = 5;
+        def b = 9;
+        def c = b + 20; // y - 1 * z > k3
+        def d = 10 * (c+a) + 7; // x - k1 * (y[+u]) > k2
+        
+        //then we can infer the constraint x-k1 *(z[+u]) > k2+k1 * (k3 + 1)
+        // d - 10*(b+a) > 6 + 10*(19+1) = 206
     }
 }

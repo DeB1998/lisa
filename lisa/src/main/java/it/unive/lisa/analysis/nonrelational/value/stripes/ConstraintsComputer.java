@@ -20,9 +20,10 @@ import org.jetbrains.annotations.Unmodifiable;
  *
  * @author Alessio De Biasi
  * @author Jonathan Gobbo
- * @version 1.1 2021-06-30
+ * @version 1.2 2021-06-30
  * @since 1.5 2021-04-17
  */
+@SuppressWarnings("OverlyComplexClass")
 final class ConstraintsComputer {
 
     /**
@@ -95,7 +96,8 @@ final class ConstraintsComputer {
      */
     @NotNull
     @Unmodifiable
-    private final Map<@NotNull Variable, @Unmodifiable @NotNull Set<@NotNull Constraint>> trackedConstraints;
+    private final Map<@NotNull Variable,
+            @Unmodifiable @NotNull Set<@NotNull Constraint>> trackedConstraints;
 
     /**
      * Creates a new object that infers new constraints on assignments or conditions based on the
@@ -104,7 +106,8 @@ final class ConstraintsComputer {
      * @param trackedConstraints The currently tracked constraints.
      */
     ConstraintsComputer(
-        @NotNull @Unmodifiable final Map<@NotNull Variable, @Unmodifiable @NotNull Set<@NotNull Constraint>> trackedConstraints
+        @NotNull @Unmodifiable final Map<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> trackedConstraints
     ) {
         //noinspection AssignmentOrReturnOfFieldWithMutableType
         this.trackedConstraints = trackedConstraints;
@@ -117,6 +120,8 @@ final class ConstraintsComputer {
      * @param firstMonomial First monomial of the assigned expression.
      * @param secondMonomial Second monomial of the assigned expression.
      * @param constant Constant value of the assigned expression.
+     * @param beforeDropConstraints The constrains tracked before the drop operation is
+     *         executed.
      * @return The inferred constraints.
      */
     @SuppressWarnings("FeatureEnvy")
@@ -125,11 +130,12 @@ final class ConstraintsComputer {
         @NotNull final Variable x,
         @NotNull final Monomial firstMonomial,
         @Nullable final Monomial secondMonomial,
-        final int constant
-    ) { // d+e --> 1*(d+e)
-        // -d-e
+        final int constant,
+        @Unmodifiable @NotNull final Map<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> beforeDropConstraints
+    ) {
         // Clear the result
-        final List<@NotNull FullConstraint> newConstraints = new LinkedList<>();
+        final List<@NotNull FullConstraint> inferredConstraints = new LinkedList<>();
         // Extract variables and coefficients
         final Variable firstVariable = firstMonomial.getVariable();
         final int firstCoefficient = firstMonomial.getCoefficient();
@@ -140,23 +146,24 @@ final class ConstraintsComputer {
             ? 0
             : secondMonomial.getCoefficient();
 
-        // CHeck if the assignment is correct
+        // Check if the assignment is correct
         if ((firstCoefficient == secondCoefficient) || (secondMonomial == null)) {
             // Flip the sides of the assignment
             if (secondMonomial == null) {
                 if (firstCoefficient == 1) {
                     //noinspection SuspiciousNameCombination
-                    newConstraints.add(
+                    inferredConstraints.add(
                         new FullConstraint(firstVariable, x, null, 1, -constant - 1)
                     );
                 } else if (firstCoefficient == -1) {
-                    newConstraints.add(
+                    //noinspection SuspiciousNameCombination
+                    inferredConstraints.add(
                         new FullConstraint(firstVariable, x, null, -1, constant - 1)
                     );
                 }
             }
             // Infer new constraints for inequality chains
-            newConstraints.addAll(
+            inferredConstraints.addAll(
                 this.computeInequalityChains(
                         x,
                         firstVariable,
@@ -166,8 +173,8 @@ final class ConstraintsComputer {
                         true
                     )
             );
-            // Infer new constraints for expression substitution
-            newConstraints.addAll(
+            // Infer new constraints for common expressions
+            inferredConstraints.addAll(
                 this.computeExpressionSubstitution(
                         x,
                         firstVariable,
@@ -176,9 +183,21 @@ final class ConstraintsComputer {
                         constant
                     )
             );
+            // Infer new constrains for assignment propagation
+            if (secondVariable != null) {
+                inferredConstraints.addAll(
+                    ConstraintsComputer.propagateNewAssignment(
+                        x,
+                        firstVariable,
+                        secondVariable,
+                        firstCoefficient,
+                        beforeDropConstraints
+                    )
+                );
+            }
         }
 
-        return newConstraints;
+        return inferredConstraints;
     }
 
     /**
@@ -244,7 +263,9 @@ final class ConstraintsComputer {
         // Clear the result
         final List<@NotNull FullConstraint> result = new LinkedList<>();
         // Loop over the tracked variables
-        for (final Entry<@NotNull Variable, @Unmodifiable Set<@NotNull Constraint>> entry : this.trackedConstraints.entrySet()) {
+        for (final Entry<@NotNull Variable,
+                @Unmodifiable Set<@NotNull Constraint>> entry :
+                this.trackedConstraints.entrySet()) {
             // Loop over the associated constraints
             for (final Constraint otherConstraint : entry.getValue()) {
                 final int otherConstraintK1 = otherConstraint.getK1();
@@ -409,7 +430,8 @@ final class ConstraintsComputer {
         final boolean isAnEquality
     ) {
         // Queue of the inequalities to explore
-        final Queue<@NotNull BooleanPair<@NotNull FullConstraint>> constraintsToExplore = new LinkedList<>();
+        final Queue<@NotNull BooleanPair<@NotNull FullConstraint>> constraintsToExplore =
+                new LinkedList<>();
         // Add the initial constraint
         constraintsToExplore.add(
             new BooleanPair<>(isAnEquality, new FullConstraint(x, y, z, k1, k2))
@@ -562,6 +584,8 @@ final class ConstraintsComputer {
      * resulting polynomial is still in normalized form.
      *
      * @param x Variable {@code x} of the normalized form.
+     * @param y Variable {@code y} of the normalized form.
+     * @param z Variable {@code z} of the normalized form.
      * @param yConstraint The constraint to substitute to variable {@code y} of the
      *         normalized form.
      * @param zConstraint The constraint to substitute to variable {@code z} of the
@@ -585,10 +609,13 @@ final class ConstraintsComputer {
         final int k1,
         final boolean isAnEquality,
         @NotNull final Polynomial basePolynomial,
-        final @NotNull Collection<@NotNull ? super BooleanPair<@NotNull FullConstraint>> constraintsToExplore,
+        final @NotNull Collection<@NotNull
+                ? super BooleanPair<@NotNull FullConstraint>> constraintsToExplore,
         final @NotNull Collection<@NotNull ? super FullConstraint> inferredConstraints
     ) {
-        if (k1 < 0 && !isAnEquality) {
+        // Skip if k1 < 0 and it is not an equality
+        // This is because multiplying by -1 will change the sign
+        if ((k1 < 0) && !isAnEquality) {
             return;
         }
         // Build the polynomial from the constraint to substitute in place of y
@@ -604,7 +631,7 @@ final class ConstraintsComputer {
         } else {
             zPolynomial = this.buildPolynomialFromConstraint(z, zConstraint);
         }
-        if (k1 < 0 && (!yPolynomial.getFirst() || !zPolynomial.getFirst())) {
+        if ((k1 < 0) && (!yPolynomial.getFirst() || !zPolynomial.getFirst())) {
             return;
         }
         // Create the final polynomial
@@ -686,7 +713,8 @@ final class ConstraintsComputer {
         @Nullable final Monomial thirdMonomial,
         final int constantCoefficient,
         final boolean isAnEquality,
-        final @NotNull Collection<@NotNull ? super BooleanPair<FullConstraint>> constraintsToExplore,
+        final @NotNull Collection<@NotNull
+                ? super BooleanPair<FullConstraint>> constraintsToExplore,
         final @NotNull Collection<@NotNull ? super FullConstraint> inferredConstraints
     ) {
         // Check if the coefficients are correct
@@ -746,7 +774,7 @@ final class ConstraintsComputer {
         @NotNull final Variable x,
         @NotNull final Constraint constraint
     ) {
-        boolean isAnEquality = isAnEquality(x, constraint);
+        final boolean isAnEquality = this.isAnEquality(x, constraint);
         // Build the polynomial
         return new BooleanPair<>(
             isAnEquality,
@@ -758,7 +786,17 @@ final class ConstraintsComputer {
         );
     }
 
-    private boolean isAnEquality(@NotNull Variable x, @NotNull Constraint constraint) {
+    /**
+     * Utility method that checks if the specified constraint associated to the specified variable
+     * has been generated by an assignment.
+     *
+     * @param x Variable the constraint is associated to.
+     * @param constraint Constraint to check.
+     * @return {@code true} if the constraints has been generated by an assignment, {@code false}
+     *         otherwise.
+     */
+    @SuppressWarnings("FeatureEnvy")
+    private boolean isAnEquality(@NotNull final Variable x, @NotNull final Constraint constraint) {
         // Check if the constraint refers to an equality
         boolean isAnEquality = false;
         if (
@@ -785,5 +823,67 @@ final class ConstraintsComputer {
             }
         }
         return isAnEquality;
+    }
+
+    /**
+     * Infers new constraints by substituting {@code x} with {@code u+v} in all the constrains
+     * contained into {@code beforeDropConstraints}.
+     *
+     * @param x Variable the expression {@code u+v} is assigned.
+     * @param u Variable {@code u} of the assigned expression.
+     * @param v Variable {@code v} of the assigned expression.
+     * @param k1 Constant {@code k}<sub>{@code 1}</sub> that multiplies {@code u+v}. If this
+     *         value is different from 1, no constraints are inferred.
+     * @param beforeDropConstraints The constraints tracked before performing the drop
+     *         operation.
+     * @return The new inferred constraints.
+     */
+    @SuppressWarnings("FeatureEnvy")
+    @NotNull
+    private static List<@NotNull FullConstraint> propagateNewAssignment(
+        @NotNull final Variable x,
+        @NotNull final Variable u,
+        @NotNull final Variable v,
+        final int k1,
+        @Unmodifiable @NotNull final Map<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> beforeDropConstraints
+    ) {
+        // Clear the result
+        final List<@NotNull FullConstraint> inferredConstraints = new LinkedList<>();
+        // Check if the constraints can be inferred
+        if (k1 == 1) {
+            // Loop over all the tracked variables before the drop operation is performed
+            for (final Entry<@NotNull Variable,
+                    @Unmodifiable @NotNull Set<@NotNull Constraint>> entry :
+                    beforeDropConstraints.entrySet()) {
+                // Extract the constraints
+                @Unmodifiable
+                final Set<@NotNull Constraint> v1Constraints = entry.getValue();
+                // Loop over the constraints
+                for (final Constraint v1Constraint : v1Constraints) {
+                    // Check if teh constraint mention variable x
+                    if (
+                        v1Constraint.getY().equals(x) &&
+                        (v1Constraint.getZ() == null) &&
+                        !entry.getKey().equals(u) &&
+                        !entry.getKey().equals(v)
+                    ) {
+                        // Add the new constraint
+                        //noinspection ObjectAllocationInLoop
+                        inferredConstraints.add(
+                            new FullConstraint(
+                                entry.getKey(),
+                                u,
+                                v,
+                                v1Constraint.getK1(),
+                                v1Constraint.getK2()
+                            )
+                        );
+                    }
+                }
+            }
+        }
+        // return the inferred constraints
+        return inferredConstraints;
     }
 }
