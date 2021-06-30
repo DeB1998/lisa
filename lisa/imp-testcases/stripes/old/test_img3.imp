@@ -1,0 +1,41 @@
+class TestImg3 {
+    
+    main1() {
+        def a = 10;
+        def b = 5;
+        if (a > b) {
+            while (b != a) {
+                def c = b + 1;
+            }
+        }
+    }
+    
+    
+    main2() {
+        def a = 10;
+        def b = 15;
+        def c = 5;
+        def d = a + b + 7; // --> d - 1*(a+b) > 7
+        for (def i = 0; i < a; i = i + 1) {
+            // d - a - b > 2 --> d - 1*(a+b)>2
+            if (d > a + b + 2) {
+                c = 0;
+            } else {
+                c = 1;
+            }
+        }
+    }
+    /*
+    main3() {
+        def a = 10;
+        def b = 15;
+        def d = a + b + 7;
+        def e = a;
+        if ((a < e) ||
+                (!(d <= a + b) && e < a)) {
+            def c = 100;
+        } else {
+            def c = 50;
+        }
+    }
+}

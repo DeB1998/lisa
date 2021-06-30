@@ -1,18 +1,7 @@
 class TestImg1{
-/*    main() {
-        def a = 10;
-        def b = 5;
-        def c = 1;
-        if (a > b) {
-            c = a - b;
-        } else {
-            c = 0;
-        }
-        return c;
-    }*/
     main() {
         def a = 10;
-        def b = 5;
+        def b = a * 3 + 5/2 + a%3;
         def c = a + 5*b - 7 - (6*a)/3 -
                 3*(b - a - 2) + 6;
         if (a > 3*b) {
@@ -20,6 +9,7 @@ class TestImg1{
             if (a > 3*b+7) {
                 c = c+1;
             }
+            b = 4*(a + d);
             c = 2*a+2*b;
         }
         return c;

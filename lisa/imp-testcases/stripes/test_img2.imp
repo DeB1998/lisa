@@ -1,24 +1,12 @@
 class TestImg2 {
-/*    main() {
-        def a = 5;
-        def b = 3;
-        def c = 7;
-        while (c + b > 0) {
-            def d = a - b;
-            def e = d;
-            def f = 2*b + 1;
-            d = f;
-            e = b;
-            b = a + c;
-        }
-    }*/
     main() {
         def a = 5;
         def b = 3;
         def c = 2*(a + b) + 1;
-        def d = c + 1;
-        def e = 2*d + 1;
-        def f = 4*d - 2;
+        //
+        def d = (-c) + 1;
+        def e = 2*(-c) + 7;
+        def f = 4*(-c) + 14;
         def g = a - b;
     }
 }

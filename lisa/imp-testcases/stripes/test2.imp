@@ -8,9 +8,9 @@ class test1 {
         def b = x;
         
         x = y;
-        x = -y;
-        x = y + z;
-        x = 2*y;
+        x = -y; // x = -a x+a > -1 x-(-1)*a > -1           a = -x   a - (-1)*x >-1
+        x = y + z; // y=a --> x = a+z
+        x = 2*y; // x = 2*a
         x = 2*y+2*z;
         x = y+y;
         x = 3*y - y;

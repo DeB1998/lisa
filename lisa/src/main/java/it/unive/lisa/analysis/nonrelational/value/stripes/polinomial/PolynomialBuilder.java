@@ -15,7 +15,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * @author Alessio De Biasi
  * @author Jonathan Gobbo
- * @version 1.0.1 2021-06-29
+ * @version 1.0.2 2021-06-30
  * @since 1.5 2021-04-17
  */
 public final class PolynomialBuilder {
@@ -61,11 +61,11 @@ public final class PolynomialBuilder {
     @Contract(value = "_, _-> this", mutates = "this")
     @NotNull
     public PolynomialBuilder addMonomial(final int coefficient, @Nullable final Variable variable) {
-        // CHeck the parameters
+        // Check the parameters
         if ((variable != null) && (coefficient != 0)) {
             // Add the monomial
-            final int newCount = this.monomials.getOrDefault(variable, 0) + 1;
-            this.monomials.put(variable, newCount);
+            final int newCoefficient = this.monomials.getOrDefault(variable, 0) + coefficient;
+            this.monomials.put(variable, newCoefficient);
         }
         // Allow chaining
         return this;

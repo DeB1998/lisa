@@ -1,6 +1,8 @@
 package it.unive.lisa.test.stripes;
 
 import it.unive.lisa.test.stripes.cfg.program.Variable;
+
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -16,13 +18,13 @@ import org.jetbrains.annotations.Nullable;
  * @version 1.0 2021-06-21
  * @since version date
  */
-public class StripesVariable implements Variable<StripesVariable> {
+public class StripesVariable implements Variable<StripesVariable>, Comparable<StripesVariable> {
 
     public static final StripesVariable TOP = new StripesVariable("⊤");
 
     public static final StripesVariable BOTTOM = new StripesVariable("⊥");
-
-    private static class Constraint {
+    
+    private static class Constraint implements Comparable<Constraint> {
 
         @NotNull
         private final String y;
@@ -64,7 +66,7 @@ public class StripesVariable implements Variable<StripesVariable> {
         @Override
         public boolean equals(final Object o) {
             if (this == o) return true;
-            if (o == null || this.getClass() != o.getClass()) return false;
+            if ((o == null) || (this.getClass() != o.getClass())) return false;
 
             final Constraint that = (Constraint) o;
 
@@ -83,15 +85,34 @@ public class StripesVariable implements Variable<StripesVariable> {
         @Override
         public int hashCode() {
             int result = this.y.hashCode();
-            result = 31 * result + (this.z != null ? this.z.hashCode() : 0);
-            result = 31 * result + this.k1;
-            result = 31 * result + this.k2;
+            result = (31 * result) + ((this.z != null) ? this.z.hashCode() : 0);
+            result = (31 * result) + this.k1;
+            result = (31 * result) + this.k2;
             return result;
         }
 
         @Override
         public String toString() {
             return "(" + this.y + ", " + this.z + ", " + this.k1 + ", " + this.k2 + ')';
+        }
+    
+        @Override
+        public int compareTo(@NotNull final Constraint o) {
+            
+            if ((this.z == null) && (o.z != null)) {
+                return -1;
+            }
+            if ((this.z != null) && (o.z == null)) {
+                return 1;
+            }
+            if (this.z == null) {
+                return this.y.compareTo(o.y);
+            }
+            if (this.y.compareTo(o.y) == 0) {
+                return this.z.compareTo(o.z);
+            }
+            
+            return this.y.compareTo(o.y);
         }
     }
 
@@ -120,6 +141,7 @@ public class StripesVariable implements Variable<StripesVariable> {
         this.constraints.add(
                 new Constraint(y.variableName, (z == null) ? null : z.variableName, k1, k2)
             );
+        Collections.sort(this.constraints);
         return this;
     }
 
@@ -158,7 +180,7 @@ public class StripesVariable implements Variable<StripesVariable> {
     @Override
     public boolean equals(final Object o) {
         if (this == o) return true;
-        if (o == null || this.getClass() != o.getClass()) return false;
+        if ((o == null) || (this.getClass() != o.getClass())) return false;
 
         final StripesVariable that = (StripesVariable) o;
 
@@ -186,19 +208,25 @@ public class StripesVariable implements Variable<StripesVariable> {
     @Override
     public int hashCode() {
         int result = this.variableName.hashCode();
-        result = 31 * result + this.constraints.hashCode();
+        result = (31 * result) + this.constraints.hashCode();
         return result;
     }
 
     @Override
     public String toString() {
-        if (this == TOP) {
+        if (this == StripesVariable.TOP) {
             return "⊤";
         }
-        if (this == BOTTOM) {
+        if (this == StripesVariable.BOTTOM) {
             return "⊥";
         }
 
         return this.variableName + " → {" + this.constraints + '}';
+    }
+    
+    @Override
+    public int compareTo(@NotNull final StripesVariable o) {
+        
+        return this.variableName.compareTo(o.variableName);
     }
 }

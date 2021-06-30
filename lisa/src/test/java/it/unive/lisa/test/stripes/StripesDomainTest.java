@@ -17,6 +17,7 @@ import it.unive.lisa.test.stripes.cfg.program.EndedProgram;
 import it.unive.lisa.test.stripes.cfg.program.Program;
 import it.unive.lisa.test.stripes.cfg.program.While;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -302,6 +303,13 @@ public class StripesDomainTest {
         final List<StripesVariable> firstData,
         final List<StripesVariable> secondData
     ) {
+    
+        final List<StripesVariable> firstDataOrdered = new LinkedList<>(firstData);
+        final List<StripesVariable> secondDataOrdered = new LinkedList<>(secondData);
+        
+        Collections.sort(firstDataOrdered);
+        Collections.sort(secondDataOrdered);
+        
         throw new AssertionError(
             String.format(
                 """
@@ -310,7 +318,7 @@ public class StripesDomainTest {
                 and
                     %s
                     
-                Found :
+                Found:
                     %s
                 Expected:
                     %s
@@ -319,8 +327,8 @@ public class StripesDomainTest {
                 """,
                 firstIdentifier,
                 secondIdentifier,
-                firstData,
-                secondData
+                firstDataOrdered,
+                secondDataOrdered
             )
         );
     }
