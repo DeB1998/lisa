@@ -92,7 +92,7 @@ public class OldMonomial {
     @Override
     public String toString() {
         
-        StringBuilder builder = new StringBuilder("Monomial { ");
+        StringBuilder builder = new StringBuilder("OldMonomial { ");
         
         if (this.variable == null) {
             builder.append("NULL ");

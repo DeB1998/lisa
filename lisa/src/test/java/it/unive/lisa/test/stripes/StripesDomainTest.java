@@ -17,8 +17,12 @@ import it.unive.lisa.test.stripes.cfg.program.EndedProgram;
 import it.unive.lisa.test.stripes.cfg.program.Program;
 import it.unive.lisa.test.stripes.cfg.program.While;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.Test;
@@ -32,9 +36,64 @@ import org.junit.Test;
  */
 @SuppressWarnings("DuplicateStringLiteralInspection")
 public class StripesDomainTest {
-
+    
+    private static class Pair<T, U>{
+        private T first;
+        private U second;
+    
+        public Pair(final T first, final U second) {
+        
+            this.first = first;
+            this.second = second;
+        }
+    
+        public T getFirst() {
+        
+            return this.first;
+        }
+    
+        public void setFirst(final T first) {
+        
+            this.first = first;
+        }
+    
+        public U getSecond() {
+        
+            return this.second;
+        }
+    
+        public void setSecond(final U second) {
+        
+            this.second = second;
+        }
+    }
+    
     private static final Pattern COMPILE = Pattern.compile(",\n");
 
+    @Test
+    public void testIterator() {
+        
+        List<String> list = new LinkedList<>();
+        Collections.addAll(list, "abc", "abc", "bcd", "bcd", "eee", "abc", "ddd", "eee");
+        int index = 0;
+        List<Pair<String, Integer>> res = list.stream().collect(LinkedList::new,
+                (resultList, element) -> {
+                    boolean found = false;
+                    for (Pair<String, Integer> e : resultList) {
+                        if (e.getFirst().equals(element)) {
+                            e.setSecond(e.getSecond() + 1);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        resultList.add(new Pair<>(element, 1));
+                    }
+                }, LinkedList::addAll);
+        
+        int a = 1;
+    }
+    
     private static void analyzeFile(String fileName) throws ParsingException, AnalysisException {
         final LiSAConfiguration conf = new LiSAConfiguration();
 

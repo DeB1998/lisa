@@ -5,8 +5,6 @@ import it.unive.lisa.analysis.nonrelational.value.stripes.polinomial.Polynomial;
 import it.unive.lisa.analysis.nonrelational.value.stripes.polinomial.PolynomialBuilder;
 import it.unive.lisa.symbolic.value.Variable;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -18,55 +16,124 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
 /**
- * Description.
+ * Utility class that infers new constraints on assignments and conditions.
  *
- * @author DeB
- * @version 1.0 2021-06-26
- * @since version date
+ * @author Alessio De Biasi
+ * @author Jonathan Gobbo
+ * @version 1.1 2021-06-30
+ * @since 1.5 2021-04-17
  */
-class ConstraintsComputer {
+final class ConstraintsComputer {
 
-    private static class EqualityContainer<T> {
+    /**
+     * Utility class that represents a pair {@code (boolean, T)}.
+     *
+     * @param <T> The type of the non-boolean element.
+     * @author Alessio De Biasi
+     * @author Jonathan Gobbo
+     * @version 1.1 2021-06-30
+     * @since 1.5 2021-04-17
+     */
+    private static final class BooleanPair<T> {
 
-        private final T data;
-        private final boolean equal;
+        /**
+         * First element of the pair.
+         */
+        private final boolean first;
 
-        public EqualityContainer(final T data, final boolean equal) {
-            this.data = data;
-            this.equal = equal;
+        /**
+         * Second element of the pair.
+         */
+        @NotNull
+        private final T second;
+
+        /**
+         * Creates a new pair {@code (boolean, T)}.
+         *
+         * @param first Boolean value.
+         * @param second Non-boolean value.
+         */
+        private BooleanPair(final boolean first, final @NotNull T second) {
+            this.second = second;
+            this.first = first;
         }
 
-        public T getData() {
-            return this.data;
+        /**
+         * Returns the boolean value.
+         *
+         * @return The boolean value.
+         */
+        @SuppressWarnings("BooleanMethodNameMustStartWithQuestion")
+        private boolean getFirst() {
+            return this.first;
         }
 
-        public boolean isEqual() {
-            return this.equal;
+        /**
+         * Returns the non-boolean value.
+         *
+         * @return The non-boolean value.
+         */
+        @NotNull
+        private T getSecond() {
+            return this.second;
         }
 
+        /**
+         * Creates a string representation of this pair.
+         *
+         * @return A string representation of this pair.
+         */
         @Override
+        @NotNull
         public String toString() {
-            return "[" + this.data + ", " + ((this.equal) ? "=" : ">") + ']';
+            return "[" + this.second + ", " + ((this.first) ? "=" : ">") + ']';
         }
     }
 
-    private final Map<Variable, Set<Constraint>> oldConstraints;
+    /**
+     * Map that constants the currently tracked variables and their constraints.
+     */
+    @NotNull
+    @Unmodifiable
+    private final Map<@NotNull Variable,
+            @Unmodifiable @NotNull Set<@NotNull Constraint>> trackedConstraints;
 
-    public ConstraintsComputer(final Map<Variable, Set<Constraint>> oldConstraints) {
-        this.oldConstraints = oldConstraints;
+    /**
+     * Creates a new object that infers new constraints on assignments or conditions based on the
+     * specified tracked constraints.
+     *
+     * @param trackedConstraints The currently tracked constraints.
+     */
+    ConstraintsComputer(
+        @NotNull @Unmodifiable final Map<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> trackedConstraints
+    ) {
+        //noinspection AssignmentOrReturnOfFieldWithMutableType
+        this.trackedConstraints = trackedConstraints;
     }
 
-    public List<FullConstraint> computeNewAssignmentConstraints(
-        final Variable x,
-        final Monomial firstMonomial,
+    /**
+     * Infers new constraints for assignments.
+     *
+     * @param x Variable being assigned.
+     * @param firstMonomial First monomial of the assigned expression.
+     * @param secondMonomial Second monomial of the assigned expression.
+     * @param constant Constant value of the assigned expression.
+     * @return The inferred constraints.
+     */
+    @SuppressWarnings("FeatureEnvy")
+    @NotNull
+    List<@NotNull FullConstraint> inferNewAssignmentConstraints(
+        @NotNull final Variable x,
+        @NotNull final Monomial firstMonomial,
         @Nullable final Monomial secondMonomial,
         final int constant
     ) {
-        final List<FullConstraint> newConstraints = new LinkedList<>();
-
+        // Clear the result
+        final List<@NotNull FullConstraint> newConstraints = new LinkedList<>();
+        // Extract variables and coefficients
         final Variable firstVariable = firstMonomial.getVariable();
         final int firstCoefficient = firstMonomial.getCoefficient();
-
         final Variable secondVariable = (secondMonomial == null)
             ? null
             : secondMonomial.getVariable();
@@ -74,15 +141,16 @@ class ConstraintsComputer {
             ? 0
             : secondMonomial.getCoefficient();
 
+        // CHeck if the assignment is correct
         if ((firstCoefficient == secondCoefficient) || (secondMonomial == null)) {
-            // x = y + k
-            // y = x - k
-
+            // Flip the sides of the assignment
             if ((firstCoefficient == 1) && (secondMonomial == null)) {
+                //noinspection SuspiciousNameCombination
                 newConstraints.add(new FullConstraint(firstVariable, x, null, 1, -constant - 1));
             }
+            // Infer new constraints for inequality chains
             newConstraints.addAll(
-                this.computeNewConstraints(
+                this.computeInequalityChains(
                         x,
                         firstVariable,
                         secondVariable,
@@ -91,8 +159,9 @@ class ConstraintsComputer {
                         true
                     )
             );
+            // Infer new constraints for expression substitution
             newConstraints.addAll(
-                this.substituteInOtherConstraints(
+                this.computeExpressionSubstitution(
                         x,
                         firstVariable,
                         secondVariable,
@@ -105,14 +174,26 @@ class ConstraintsComputer {
         return newConstraints;
     }
 
-    public List<FullConstraint> computeNewConditionConstraints(
-        @Unmodifiable final List<FullConstraint> conditionConstraints
+    /**
+     * Infers new constraints for conditions.
+     *
+     * @param conditionConstraints Constraints extracted from the evaluation of the
+     *         condition.
+     * @return The inferred constraints.
+     */
+    @SuppressWarnings("FeatureEnvy")
+    @NotNull
+    List<FullConstraint> inferNewConditionConstraints(
+        @NotNull @Unmodifiable final Iterable<@NotNull FullConstraint> conditionConstraints
     ) {
-        final List<FullConstraint> result = new LinkedList<>();
+        // Clear the result
+        final List<@NotNull FullConstraint> result = new LinkedList<>();
 
+        // Try to infer new constraints
         for (final FullConstraint conditionConstraint : conditionConstraints) {
+            // Infer inequality chains
             result.addAll(
-                this.computeNewConstraints(
+                this.computeInequalityChains(
                         conditionConstraint.getX(),
                         conditionConstraint.getY(),
                         conditionConstraint.getZ(),
@@ -126,109 +207,114 @@ class ConstraintsComputer {
         return result;
     }
 
-    private List<FullConstraint> substituteInOtherConstraints(
-        final Variable x,
-        final Variable y,
+    /**
+     * Infer new constraints by:
+     * <ul>
+     *     <li>Substituting the assigned expression with multiples of the expressions assigned to
+     *     other variables;</li>
+     *     <li>Substituting multiples of the assigned expression on expressions assigned to other
+     *     variables.</li>
+     * </ul>
+     *
+     * @param x Variable {@code x} of the normalized form.
+     * @param y Variable {@code y} of the normalized form.
+     * @param z Variable {@code z} of the normalized form.
+     * @param k1 Constant {@code k}<sub>{@code 1}</sub> of the normalized form.
+     * @param k2 Constant {@code k}<sub>{@code 2}</sub> of the normalized form.
+     * @return The inferred constraints.
+     */
+    @SuppressWarnings(
+        { "ObjectAllocationInLoop", "FeatureEnvy", "OverlyComplexMethod", "OverlyNestedMethod" }
+    )
+    @NotNull
+    private List<@NotNull FullConstraint> computeExpressionSubstitution(
+        @NotNull final Variable x,
+        @NotNull final Variable y,
         @Nullable final Variable z,
         final int k1,
         final int k2
     ) {
-        final List<FullConstraint> result = new LinkedList<>();
-        for (final Entry<Variable, Set<Constraint>> entry : this.oldConstraints.entrySet()) {
-            for (final Constraint constraint : entry.getValue()) {
-                final int constraintK1 = constraint.getK1();
-                final int constraintK2 = constraint.getK2() + 1;
+        // Clear the result
+        final List<@NotNull FullConstraint> result = new LinkedList<>();
+        // Loop over the tracked variables
+        for (final Entry<@NotNull Variable,
+                @Unmodifiable Set<@NotNull Constraint>> entry :
+                this.trackedConstraints.entrySet()) {
+            // Loop over the associated constraints
+            for (final Constraint otherConstraint : entry.getValue()) {
+                final int otherConstraintK1 = otherConstraint.getK1();
+                final int otherConstraintK2 = otherConstraint.getK2() + 1;
+                // Check if the variable z is present in the expression
                 if (z == null) {
                     if (k1 == 1) {
-                        if (constraint.getY().equals(y)) {
+                        if (otherConstraint.getY().equals(y)) {
+                            // Substitute the assigned variables in assignments of the same
+                            // expression
+                            //noinspection SuspiciousNameCombination
                             result.add(
                                 new FullConstraint(
                                     entry.getKey(),
                                     x,
-                                    constraint.getZ(),
-                                    constraintK1,
-                                    constraintK2 - (constraint.getK1() * k2) - 1 // x = y --> x > -1
-                                    // a = y --> a > y-1
-                                    // x = a --> x-a >-1
+                                    otherConstraint.getZ(),
+                                    otherConstraintK1,
+                                    otherConstraintK2 - (otherConstraintK1 * k2) - 1
                                 )
                             );
-                            if ((constraint.getK1() == 1) || (constraint.getK1() == -1)) {
+                            // Substitute the expression on other assignments
+                            if ((otherConstraintK1 == 1) || (otherConstraintK1 == -1)) {
                                 result.add(
                                     new FullConstraint(
                                         x,
                                         entry.getKey(),
-                                        constraint.getZ(),
-                                        constraint.getK1(),
-                                        k2 - (constraint.getK1() * constraintK2) - 1
+                                        otherConstraint.getZ(),
+                                        otherConstraintK1,
+                                        k2 - (otherConstraintK1 * otherConstraintK2) - 1
                                     )
                                 );
                             }
                         }
-                        if (y.equals(constraint.getZ())) {
+                        // Substitute y with the z variable on the constraint
+                        if (y.equals(otherConstraint.getZ())) {
                             result.add(
                                 new FullConstraint(
                                     entry.getKey(),
-                                    constraint.getY(),
+                                    otherConstraint.getY(),
                                     y,
-                                    constraint.getK1(),
-                                    (constraintK2 + (constraint.getK1() * k2)) - 1
+                                    otherConstraintK1,
+                                    (otherConstraintK2 + (otherConstraintK1 * k2)) - 1
                                 )
                             );
                         }
-                    } else {
-                        if (constraint.getZ() == null) {
-                            if (constraint.getY().equals(y)) {
-                                if ((constraint.getK1() % k1) == 0) {
-                                    result.add(
-                                        new FullConstraint(
-                                            entry.getKey(),
-                                            x,
-                                            null,
-                                            constraint.getK1() / k1,
-                                            constraintK2 - ((constraint.getK1() / k1) * k2) - 1
-                                        )
-                                    );
-                                } else if ((k1 % constraint.getK1()) == 0) {
-                                    result.add( // b = c-1 m -2c > 0
-                                        // b = c-1 --> m=2(c-1)+3 --> m = 2c+1 ----> m -2c > 0
-                                        new FullConstraint(
-                                            x,
-                                            entry.getKey(),
-                                            null,
-                                            k1 / constraint.getK1(),
-                                            k2 - ((k1 / constraint.getK1()) * constraintK2) - 1
-                                        )
-                                    );
-                                }
-                            }
+                    } else if (otherConstraint.getZ() == null) {
+                        // The variable z is not present in the constraint being analyzed
+                        // Check that variables y are the same
+                        if (otherConstraint.getY().equals(y)) {
+                            ConstraintsComputer.substituteOnExpression(
+                                x,
+                                entry.getKey(),
+                                k1,
+                                otherConstraintK1,
+                                k2,
+                                otherConstraintK2,
+                                otherConstraint,
+                                result
+                            );
                         }
                     }
                 } else if (
-                    (y.equals(constraint.getY()) && z.equals(constraint.getZ())) ||
-                    (z.equals(constraint.getY()) && y.equals(constraint.getZ()))
+                    (y.equals(otherConstraint.getY()) && z.equals(otherConstraint.getZ())) ||
+                    (z.equals(otherConstraint.getY()) && y.equals(otherConstraint.getZ()))
                 ) {
-                    if ((constraint.getK1() % k1) == 0) {
-                        result.add(
-                            new FullConstraint(
-                                entry.getKey(),
-                                x,
-                                null,
-                                constraint.getK1() / k1,
-                                constraintK2 - ((constraint.getK1() / k1) * k2) - 1
-                            )
-                        );
-                    }
-                    if ((k1 % constraint.getK1()) == 0) {
-                        result.add(
-                            new FullConstraint(
-                                x,
-                                entry.getKey(),
-                                null,
-                                k1 / constraint.getK1(),
-                                k2 - ((k1 / constraint.getK1()) * constraintK2) - 1
-                            )
-                        );
-                    }
+                    ConstraintsComputer.substituteOnExpression(
+                        x,
+                        entry.getKey(),
+                        k1,
+                        otherConstraintK1,
+                        k2,
+                        otherConstraintK2,
+                        otherConstraint,
+                        result
+                    );
                 }
             }
         }
@@ -236,30 +322,108 @@ class ConstraintsComputer {
         return result;
     }
 
-    private List<FullConstraint> computeNewConstraints(
-        final Variable x,
-        final Variable y,
+    /**
+     * Adds new constraints by:
+     * <ul>
+     *     <li>Substituting the assigned expression with multiples of the expressions
+     *           assigned to other variables;</li>
+     *     <li>Substituting multiples of the assigned expression on expressions assigned to
+     *           other variables.</li>
+     * </ul>
+     *
+     * @param x Variable {@code x} of the normalized form.
+     * @param otherConstraintX Variable {@code x} of the other constraint.
+     * @param k1 Constant {@code k}<sub>{@code 1}</sub> of the normalized form.
+     * @param otherConstraintK1 Constant {@code k}<sub>{@code 1}</sub> of the other
+     *         constraint.
+     * @param k2 Constant {@code k}<sub>{@code 2}</sub> of the normalized form.
+     * @param otherConstraintK2 Constant {@code k}<sub>{@code 2}</sub> of the other
+     *         constraint.
+     * @param otherConstraint The other constraint.
+     * @param result The collection the new constraints will be added.
+     */
+    @SuppressWarnings({ "MethodWithTooManyParameters", "SuspiciousNameCombination" })
+    private static void substituteOnExpression(
+        @NotNull final Variable x,
+        @NotNull final Variable otherConstraintX,
+        final int k1,
+        final int otherConstraintK1,
+        final int k2,
+        final int otherConstraintK2,
+        @NotNull final Constraint otherConstraint,
+        final @NotNull Collection<? super @NotNull FullConstraint> result
+    ) {
+        // The constraint is a multiple of a previous one
+        if ((otherConstraintK1 % k1) == 0) {
+            result.add(
+                new FullConstraint(
+                    otherConstraintX,
+                    x,
+                    null,
+                    otherConstraintK1 / k1,
+                    otherConstraintK2 - ((otherConstraintK1 / k1) * k2) - 1
+                )
+            );
+        }
+        // A previous constraint is a multiple of the new one
+        if ((k1 % otherConstraintK1) == 0) {
+            result.add(
+                new FullConstraint(
+                    x,
+                    otherConstraintX,
+                    null,
+                    k1 / otherConstraint.getK1(),
+                    k2 - ((k1 / otherConstraintK1) * otherConstraintK2) - 1
+                )
+            );
+        }
+    }
+
+    /**
+     * Computes new constraints following the tracked inequalities.
+     *
+     * @param x Variable {@code x} of the normalized form.
+     * @param y Variable {@code y} of the normalized form.
+     * @param z Variable {@code z} of the normalized form.
+     * @param k1 Constant {@code k}<sub>{@code 1}</sub> of the normalized form.
+     * @param k2 Constant {@code k}<sub>{@code 2}</sub> of the normalized form.
+     * @param isAnEquality {@code true} if the normalized form can be refined by changing
+     *         the {@code >} sign with the {@code =} one.
+     * @return The inferred constraints.
+     */
+    @SuppressWarnings("FeatureEnvy")
+    @NotNull
+    private List<@NotNull FullConstraint> computeInequalityChains(
+        @NotNull final Variable x,
+        @NotNull final Variable y,
         @Nullable final Variable z,
         final int k1,
         final int k2,
-        boolean equalSign
+        final boolean isAnEquality
     ) {
-        final List<FullConstraint> newConstraints = new LinkedList<>();
-        final Queue<EqualityContainer<FullConstraint>> constraintsToExplore = new LinkedList<>();
+        // Queue of the inequalities to explore
+        final Queue<@NotNull BooleanPair<@NotNull FullConstraint>> constraintsToExplore =
+                new LinkedList<>();
+        // Add the initial constraint
         constraintsToExplore.add(
-            new EqualityContainer<>(new FullConstraint(x, y, z, k1, k2), equalSign)
+            new BooleanPair<>(isAnEquality, new FullConstraint(x, y, z, k1, k2))
         );
-
+        // Clear the result
+        final List<@NotNull FullConstraint> newConstraints = new LinkedList<>();
+        // loop over all the parts of the chain
         while (!constraintsToExplore.isEmpty()) {
-            final EqualityContainer<FullConstraint> next = constraintsToExplore.remove();
-            final FullConstraint nextConstraint = next.getData();
-            final boolean constraintEqualSign = next.isEqual();
+            // Extract the next part of the chain
+            final BooleanPair<@NotNull FullConstraint> next = constraintsToExplore.remove();
+            // Extract its components
+            final boolean isEqualitySign = next.getFirst();
+            final FullConstraint nextConstraint = next.getSecond();
             final Variable nextX = nextConstraint.getX();
             final Variable nextY = nextConstraint.getY();
             final Variable nextZ = nextConstraint.getZ();
             final int nextK1 = nextConstraint.getK1();
             final int nextK2 = nextConstraint.getK2();
 
+            // Substitute variable y of the normalized form with its constraints
             this.substituteVariables(
                     nextX,
                     nextY,
@@ -267,10 +431,11 @@ class ConstraintsComputer {
                     false,
                     nextK1,
                     nextK2,
-                    constraintEqualSign,
+                    isEqualitySign,
                     constraintsToExplore,
                     newConstraints
                 );
+            // Substitute variable z of the normalized form with its constraints
             this.substituteVariables(
                     nextX,
                     nextZ,
@@ -278,10 +443,11 @@ class ConstraintsComputer {
                     false,
                     nextK1,
                     nextK2,
-                    constraintEqualSign,
+                    isEqualitySign,
                     constraintsToExplore,
                     newConstraints
                 );
+            // Substitute variables y and z of the normalized form with their constraints
             this.substituteVariables(
                     nextX,
                     nextY,
@@ -289,7 +455,7 @@ class ConstraintsComputer {
                     true,
                     nextK1,
                     nextK2,
-                    constraintEqualSign,
+                    isEqualitySign,
                     constraintsToExplore,
                     newConstraints
                 );
@@ -298,49 +464,82 @@ class ConstraintsComputer {
         return newConstraints;
     }
 
+    /**
+     * Substitute variable y and optionally z with their constraints.
+     *
+     * @param x Variable {@code x} of the normalized form.
+     * @param y Variable {@code y} of the normalized form.
+     * @param z Variable {@code z} of the normalized form.
+     * @param substituteZ {@code true} if {@code z} will be substituted with its
+     *         constraints, {@code false} otherwise.
+     * @param k1 Constant {@code k}<sub>{@code 1}</sub> of the normalized form.
+     * @param k2 Constant {@code k}<sub>{@code 2}</sub> of the normalized form.
+     * @param isAnEquality {@code true} if the normalized form can be refined by changing
+     *         the {@code >} sign with the {@code =} one.
+     * @param constraintsToExplore Collection where the inferred constraints will be added
+     *         in order to be explored as part of the inequality chain.
+     * @param inferredConstraints Collection where the inferred constraints will be added.
+     */
+    @SuppressWarnings({ "FeatureEnvy", "MethodWithTooManyParameters" })
     private void substituteVariables(
-        final Variable x,
-        final Variable y,
+        @NotNull final Variable x,
+        @Nullable final Variable y,
         @Nullable final Variable z,
         final boolean substituteZ,
         final int k1,
         final int k2,
-        final boolean equalSign,
-        final @NotNull Collection<? super EqualityContainer<FullConstraint>> constraintsToExplore,
-        final @NotNull Collection<? super FullConstraint> newConstraints
+        final boolean isAnEquality,
+        final @NotNull Collection<? super BooleanPair<FullConstraint>> constraintsToExplore,
+        final @NotNull Collection<? super FullConstraint> inferredConstraints
     ) {
-        final Set<Constraint> yConstraints = this.oldConstraints.get(y);
+        // Extract the constraints associated to y
+        @Unmodifiable
+        final Set<@NotNull Constraint> yConstraints = this.trackedConstraints.get(y);
         if (yConstraints != null) {
-            final Polynomial basePolynomial = new PolynomialBuilder(3)
+            // Create the polynomial x-k2
+            final PolynomialBuilder basePolynomialBuilder = new PolynomialBuilder(3)
                 .addMonomial(1, x)
-                .setConstantCoefficient(-k2)
-                .build();
-            if ((z == null) || (this.oldConstraints.get(z) == null)) {
+                .setConstantCoefficient(-k2);
+            // Add z if it is not to substitute
+            if (!substituteZ) {
+                basePolynomialBuilder.addMonomial(k1, z);
+            }
+            // Build the base polynomial where the substituted variables will be summed
+            final Polynomial basePolynomial = basePolynomialBuilder.build();
+            // Check what are the variables to substitute
+            if ((z == null) || (this.trackedConstraints.get(z) == null) || !substituteZ) {
+                // Loop over the constraints associated to y
                 for (final Constraint yConstraint : yConstraints) {
+                    // Substitute only y
                     this.polynomialSubstitution(
                             x,
                             yConstraint,
                             null,
-                            basePolynomial,
                             k1,
-                            equalSign,
+                            isAnEquality,
+                            basePolynomial,
                             constraintsToExplore,
-                            newConstraints
+                            inferredConstraints
                         );
                 }
             } else {
-                final Set<Constraint> zConstraints = this.oldConstraints.get(z);
+                // Get the constraints associated to z
+                @Unmodifiable
+                final Set<@NotNull Constraint> zConstraints = this.trackedConstraints.get(z);
+                // Loop over the constraints associated to y
                 for (final Constraint yConstraint : yConstraints) {
+                    // Loop over the constraints associated to z
                     for (final Constraint zConstraint : zConstraints) {
+                        // Substitute y and z
                         this.polynomialSubstitution(
                                 x,
                                 yConstraint,
                                 zConstraint,
-                                basePolynomial,
                                 k1,
-                                equalSign,
+                                isAnEquality,
+                                basePolynomial,
                                 constraintsToExplore,
-                                newConstraints
+                                inferredConstraints
                             );
                     }
                 }
@@ -348,81 +547,132 @@ class ConstraintsComputer {
         }
     }
 
+    /**
+     * Substitutes variable y and optional z with one of their constraints and checks if the
+     * resulting polynomial is still in normalized form.
+     *
+     * @param x Variable {@code x} of the normalized form.
+     * @param yConstraint The constraint to substitute to variable {@code y} of the
+     *         normalized form.
+     * @param zConstraint The constraint to substitute to variable {@code z} of the
+     *         normalized form.
+     * @param k1 Constant {@code k}<sub>{@code 1}</sub> of the normalized form.
+     * @param isAnEquality {@code true} if the normalized form can be refined by changing
+     *         the {@code >} sign with the {@code =} one.
+     * @param basePolynomial The polynomial the variable-to-constraint substitution will be
+     *         summed.
+     * @param constraintsToExplore Collection where the inferred constraints will be added
+     *         in order to be explored as part of the inequality chain.
+     * @param inferredConstraints Collection where the inferred constraints will be added.
+     */
+    @SuppressWarnings({ "FeatureEnvy", "OverlyComplexMethod", "MethodWithTooManyParameters" })
     private void polynomialSubstitution(
-        final Variable x,
-        final Constraint yConstraint,
+        @NotNull final Variable x,
+        @NotNull final Constraint yConstraint,
         @Nullable final Constraint zConstraint,
-        final Polynomial basePolynomial,
         final int k1,
-        final boolean equalSign,
-        final @NotNull Collection<? super EqualityContainer<FullConstraint>> constraintsToExplore,
-        final @NotNull Collection<? super FullConstraint> newConstraints
+        final boolean isAnEquality,
+        @NotNull final Polynomial basePolynomial,
+        final @NotNull Collection<@NotNull
+                ? super BooleanPair<@NotNull FullConstraint>> constraintsToExplore,
+        final @NotNull Collection<@NotNull ? super FullConstraint> inferredConstraints
     ) {
-        final EqualityContainer<Polynomial> yPolynomial =
+        // Build the polynomial from the constraint to substitute in place of y
+        final BooleanPair<@NotNull Polynomial> yPolynomial =
             this.buildPolynomialFromConstraint(x, yConstraint);
-        final EqualityContainer<Polynomial> zPolynomial;
+        final BooleanPair<@NotNull Polynomial> zPolynomial;
+        // Build the polynomial from the constraint to substitute in place of z
         if (zConstraint == null) {
-            zPolynomial = new EqualityContainer<>(new Polynomial(3, 0), true);
+            // Polynomial 0
+            zPolynomial =
+                new BooleanPair<>(true, new PolynomialBuilder(3).setConstantCoefficient(0).build());
         } else {
             zPolynomial = this.buildPolynomialFromConstraint(x, zConstraint);
         }
+        // Create the final polynomial
         final Polynomial result = basePolynomial
-            .subtract(yPolynomial.getData().multiply(k1))
-            .subtract(zPolynomial.getData().multiply(k1));
-        final boolean newEqualSign = equalSign && yPolynomial.isEqual() && zPolynomial.isEqual();
+            .subtract(yPolynomial.getSecond().multiply(k1))
+            .subtract(zPolynomial.getSecond().multiply(k1));
+
+        // Check if the result is still normalized
         if (result.isValid() && ((result.getSize() == 2) || (result.getSize() == 3))) {
+            // Extract the monomials and the constant
             final Monomial firstMonomial = result.getMonomial(0);
             final Monomial secondMonomial = result.getMonomial(1);
             @Nullable
             final Monomial thirdMonomial = (result.getSize() == 3) ? result.getMonomial(2) : null;
             final int constantCoefficient = result.getConstantCoefficient();
+            // Check if the result can be refined
+            final boolean isResultAnEquality =
+                isAnEquality && yPolynomial.getFirst() && zPolynomial.getFirst();
+            // Infer new constraints based on where variable x is
             if (firstMonomial.getVariable().equals(x)) {
+                // The first monomial is the variable x
                 ConstraintsComputer.extractConstraints(
                     x,
                     firstMonomial,
                     secondMonomial,
                     thirdMonomial,
                     constantCoefficient,
+                    isResultAnEquality,
                     constraintsToExplore,
-                    newConstraints,
-                    newEqualSign
+                    inferredConstraints
                 );
             } else if (secondMonomial.getVariable().equals(x)) {
+                // The second monomial is the variable x
                 ConstraintsComputer.extractConstraints(
                     x,
                     secondMonomial,
                     firstMonomial,
                     thirdMonomial,
                     constantCoefficient,
+                    isResultAnEquality,
                     constraintsToExplore,
-                    newConstraints,
-                    newEqualSign
+                    inferredConstraints
                 );
-            } else if ((thirdMonomial != null) && thirdMonomial.equals(x)) {
+            } else if ((thirdMonomial != null) && thirdMonomial.getVariable().equals(x)) {
+                // The third monomial is the variable x
                 ConstraintsComputer.extractConstraints(
                     x,
                     thirdMonomial,
                     firstMonomial,
                     secondMonomial,
                     constantCoefficient,
+                    isResultAnEquality,
                     constraintsToExplore,
-                    newConstraints,
-                    newEqualSign
+                    inferredConstraints
                 );
             }
         }
     }
 
+    /**
+     * Infers new constraints from the specified monomials.
+     *
+     * @param x The variable {@code x} the new constraint will be associated to.
+     * @param firstMonomial First monomial.
+     * @param secondMonomial Second monomial.
+     * @param thirdMonomial Third monomial.
+     * @param constantCoefficient Constant value.
+     * @param isAnEquality {@code true} if the normalized form can be refined by changing
+     *         the {@code >} sign with the {@code =} one.
+     * @param constraintsToExplore Collection where the inferred constraints will be added
+     *         in order to be explored as part of the inequality chain.
+     * @param inferredConstraints Collection where the inferred constraints will be added.
+     */
+    @SuppressWarnings({ "FeatureEnvy", "MethodWithTooManyParameters" })
     private static void extractConstraints(
-        final Variable x,
-        final Monomial firstMonomial,
-        final Monomial secondMonomial,
+        @NotNull final Variable x,
+        @NotNull final Monomial firstMonomial,
+        @NotNull final Monomial secondMonomial,
         @Nullable final Monomial thirdMonomial,
         final int constantCoefficient,
-        final @NotNull Collection<? super EqualityContainer<FullConstraint>> constraintsToExplore,
-        final @NotNull Collection<? super FullConstraint> newConstraints,
-        final boolean equalSign
+        final boolean isAnEquality,
+        final @NotNull Collection<@NotNull
+                ? super BooleanPair<FullConstraint>> constraintsToExplore,
+        final @NotNull Collection<@NotNull ? super FullConstraint> inferredConstraints
     ) {
+        // Check if the coefficients are correct
         if (
             (firstMonomial.getCoefficient() == 1) &&
             (
@@ -430,193 +680,81 @@ class ConstraintsComputer {
                 (secondMonomial.getCoefficient() == thirdMonomial.getCoefficient())
             )
         ) {
-            final FullConstraint newConstraint = new FullConstraint(
-                firstMonomial.getVariable(),
-                secondMonomial.getVariable(),
-                (thirdMonomial == null) ? null : thirdMonomial.getVariable(),
-                -secondMonomial.getCoefficient(),
-                -constantCoefficient
-            );
+            // Avoid loops due to equalities
             if (!firstMonomial.getVariable().equals(x)) {
-                constraintsToExplore.add(new EqualityContainer<>(newConstraint, equalSign));
+                // Add the new constraint to the ones to explore in order to continue the chain
+                constraintsToExplore.add(
+                    new BooleanPair<>(
+                        isAnEquality,
+                        new FullConstraint(
+                            firstMonomial.getVariable(),
+                            secondMonomial.getVariable(),
+                            (thirdMonomial == null) ? null : thirdMonomial.getVariable(),
+                            -secondMonomial.getCoefficient(),
+                            -constantCoefficient
+                        )
+                    )
+                );
             }
-            newConstraints.add(
+            // Add the inferred constraint properly refined
+            inferredConstraints.add(
                 new FullConstraint(
                     firstMonomial.getVariable(),
                     secondMonomial.getVariable(),
                     (thirdMonomial == null) ? null : thirdMonomial.getVariable(),
                     -secondMonomial.getCoefficient(),
-                    (equalSign) ? -constantCoefficient - 1 : -constantCoefficient
+                    (isAnEquality) ? (-constantCoefficient - 1) : -constantCoefficient
                 )
             );
         }
     }
 
-    private EqualityContainer<Polynomial> buildPolynomialFromConstraint(
-        final Variable x,
-        final Constraint constraint
+    /**
+     * Utility method that build a polynomial from the specified constraint.
+     *
+     * @param x The variable the constraint is associated to.
+     * @param constraint Constraint to build the polynomial from.
+     * @return A boolean pair where:
+     *         <ul>
+     *             <li>The boolean value is {@code true} if variable {@code x} is equal to the
+     *             constraint, {@code false} if variable {@code x} is simply greater than the
+     *             constraint;</li>
+     *             <li>The non-boolean value is the polynomial.</li>
+     *         </ul>
+     */
+    @SuppressWarnings("FeatureEnvy")
+    @NotNull
+    private BooleanPair<@NotNull Polynomial> buildPolynomialFromConstraint(
+        @NotNull final Variable x,
+        @NotNull final Constraint constraint
     ) {
-        boolean equalSign = false;
-        if (constraint.getK1() == 1) {
-            final Set<Constraint> constraintsToCheck = this.oldConstraints.get(constraint.getY());
+        // Check if the constraint refers to an equality
+        boolean isAnEquality = false;
+        if ((constraint.getK1() == 1) && (constraint.getZ() == null)) {
+            // Extract the constraints associated to y
+            @Unmodifiable
+            final Set<@NotNull Constraint> constraintsToCheck =
+                this.trackedConstraints.get(constraint.getY());
             if (constraintsToCheck != null) {
-                for (final Constraint constraintToCheck : constraintsToCheck) {
-                    if (constraintToCheck.getY().equals(x)) {
-                        equalSign = true;
-                        break;
-                    }
-                }
+                // Check if there exists a constraint that mention x with the opposite constant
+                isAnEquality =
+                    constraintsToCheck
+                        .stream()
+                        .anyMatch(
+                            constraintToCheck ->
+                                constraintToCheck.getY().equals(x) &&
+                                (constraintToCheck.getK2() == (-constraint.getK2() - 1))
+                        );
             }
         }
-        return new EqualityContainer<>(
+        // Build the polynomial
+        return new BooleanPair<>(
+            isAnEquality,
             new PolynomialBuilder(3)
                 .addMonomial(constraint.getK1(), constraint.getY())
                 .addMonomial(constraint.getK1(), constraint.getZ())
-                .setConstantCoefficient(constraint.getK2() + ((equalSign) ? 1 : 0))
-                .build(),
-            equalSign
+                .setConstantCoefficient(constraint.getK2() + ((isAnEquality) ? 1 : 0))
+                .build()
         );
     }
-    /*
-    private void substituteVariables(
-        final Variable x,
-        final Variable y,
-        @Nullable final Variable z,
-        boolean substituteZ,
-        final int k1,
-        final int k2,
-        final @NotNull Collection<? super FullConstraint> constraintsToExplore,
-        final @NotNull Collection<? super FullConstraint> newConstraints
-    ) {
-        final Set<Constraint> yConstraints = this.oldConstraints.get(y);
-        if (yConstraints != null) {
-            final Polynomial basePolynomial = new PolynomialBuilder(3)
-                .addMonomial(1, x)
-                .setConstantCoefficient(-k2)
-                .build();
-            final Polynomial zero = new PolynomialBuilder(3).setConstantCoefficient(0).build();
-            Set<Constraint> zConstraints = null;
-            if ((z != null) && substituteZ) {
-                zConstraints = this.oldConstraints.get(z);
-            }
-            if (zConstraints == null) {
-                zConstraints = new HashSet<>();
-            }
-
-            for (final Constraint yConstraint : yConstraints) {
-                Iterator<Constraint> zConstraintIterator = zConstraints.iterator();
-                boolean onlyOneConstraintToProcess = zConstraints.isEmpty();
-
-                while (zConstraintIterator.hasNext() || onlyOneConstraintToProcess) {
-                    Constraint zConstraint = (zConstraintIterator.hasNext())
-                        ? zConstraintIterator.next()
-                        : null;
-                    final Polynomial yPolynomial = ConstraintsComputer
-                        .buildPolynomialFromConstraint(yConstraint)
-                        .multiply(k1);
-                    final Polynomial zPolynomial;
-                    if (zConstraint == null) {
-                        if (substituteZ) {
-                            if (z == null) {
-                                zPolynomial = zero;
-                            } else {
-                                zPolynomial = new Polynomial(3, z, k1);
-                            }
-                        } else {
-                            zPolynomial = new Polynomial(3, z, k1);
-                        }
-                    } else {
-                        zPolynomial =
-                            ConstraintsComputer
-                                .buildPolynomialFromConstraint(zConstraint)
-                                .multiply(k1);
-                    }
-                    final Polynomial result = basePolynomial
-                        .subtract(yPolynomial)
-                        .subtract(zPolynomial);
-                    if (result.isValid() && ((result.getSize() == 2) || (result.getSize() == 3))) {
-                        final Monomial firstMonomial = result.getMonomial(0);
-                        final Monomial secondMonomial = result.getMonomial(1);
-                        @Nullable
-                        final Monomial thirdMonomial = (result.getSize() == 3)
-                            ? result.getMonomial(2)
-                            : null;
-                        final int constantCoefficient = result.getConstantCoefficient();
-                        if (firstMonomial.getVariable().equals(x)) {
-                            ConstraintsComputer.extractConstraint(
-                                x,
-                                firstMonomial,
-                                secondMonomial,
-                                thirdMonomial,
-                                constantCoefficient,
-                                constraintsToExplore,
-                                newConstraints
-                            );
-                        } else if (secondMonomial.getVariable().equals(x)) {
-                            ConstraintsComputer.extractConstraint(
-                                x,
-                                secondMonomial,
-                                firstMonomial,
-                                thirdMonomial,
-                                constantCoefficient,
-                                constraintsToExplore,
-                                newConstraints
-                            );
-                        } else if ((thirdMonomial != null) && thirdMonomial.equals(x)) {
-                            ConstraintsComputer.extractConstraint(
-                                x,
-                                thirdMonomial,
-                                firstMonomial,
-                                secondMonomial,
-                                constantCoefficient,
-                                constraintsToExplore,
-                                newConstraints
-                            );
-                        }
-                    }
-                    if (zConstraints.isEmpty()) {
-                        onlyOneConstraintToProcess = false;
-                    }
-                }
-            }
-        }
-    }
-
-    private static void extractConstraint(
-        final Variable x,
-        final Monomial firstMonomial,
-        final Monomial secondMonomial,
-        @Nullable final Monomial thirdMonomial,
-        final int constantCoefficient,
-        final @NotNull Collection<? super FullConstraint> constraintsToExplore,
-        final @NotNull Collection<? super FullConstraint> newConstraints
-    ) {
-        if (
-            (firstMonomial.getCoefficient() == 1) &&
-            (
-                (thirdMonomial == null) ||
-                (secondMonomial.getCoefficient() == thirdMonomial.getCoefficient())
-            )
-        ) {
-            final FullConstraint newConstraint = new FullConstraint(
-                firstMonomial.getVariable(),
-                secondMonomial.getVariable(),
-                (thirdMonomial == null) ? null : thirdMonomial.getVariable(),
-                -secondMonomial.getCoefficient(),
-                -constantCoefficient
-            );
-            if (!firstMonomial.getVariable().equals(x)) {
-                constraintsToExplore.add(newConstraint);
-            }
-            newConstraints.add(newConstraint);
-        }
-    }
-
-    private static Polynomial buildPolynomialFromConstraint(final Constraint constraint) {
-        return new PolynomialBuilder(3)
-            .addMonomial(constraint.getK1(), constraint.getY())
-            .addMonomial(constraint.getK1(), constraint.getZ())
-            .setConstantCoefficient(constraint.getK2())
-            .build();
-    }*/
 }

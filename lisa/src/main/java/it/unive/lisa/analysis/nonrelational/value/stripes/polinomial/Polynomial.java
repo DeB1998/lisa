@@ -1,296 +1,472 @@
 package it.unive.lisa.analysis.nonrelational.value.stripes.polinomial;
 
-import it.unive.lisa.symbolic.value.Variable;
 import java.util.Arrays;
+import java.util.stream.IntStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Description.
+ * Class that represents a polynomial. A polynomial holds a sequence of monomials that differs in
+ * the variable, i.e., it is not possible that a polynomial holds two monomials with the same
+ * variable.<br> This class is immutable, i.e., every operation between two polynomials creates a
+ * new polynomial that holds the result.<br> This class holds a fixed number of monomials. When the
+ * result of an operation exceeds this number, {@link Polynomial#INVALID} is returned. This
+ * polynomial is the ONLY one whose {@link Polynomial#isValid()} returns {@code false}.
  *
- * @author DeB
- * @version 1.0 2021-05-16
- * @since version date
+ * @author Alessio De Biasi
+ * @author Jonathan Gobbo
+ * @version 1.3 2021-06-29
+ * @since 1.5 2021-04-17
  */
-public class Polynomial {
+public final class Polynomial {
 
-    public static final Polynomial INVALID = new Polynomial(false);
+    /**
+     * Invalid polynomial. A polynomial is invalid when it is requested to hold more monomials than
+     * the maximum allowed.
+     */
+    @NotNull
+    public static final Polynomial INVALID = new Polynomial();
 
+    /**
+     * Sequence of monomials.
+     */
     @NotNull
     private final Monomial[] monomials;
 
+    /**
+     * Value of the monomial with degree 0.
+     */
     private final int constantCoefficient;
 
-    private final int monomialCount;
+    /**
+     * Maximum number of monomials.
+     */
+    private final int monomialsCount;
 
+    /**
+     * Flag that states if this polynomial is constant or not.
+     */
     private final boolean isConstantPolynomial;
 
-    private final boolean valid;
-
-    public Polynomial(final int monomialCount, final int constantCoefficient) {
-        this(new Monomial[monomialCount], constantCoefficient, monomialCount, true);
-        Arrays.fill(this.monomials, new Monomial());
-    }
-
-    public Polynomial(final int monomialCount, final Variable variable, final int coefficient) {
-        this(new Monomial[monomialCount], 0, monomialCount, coefficient == 0);
-        Arrays.fill(this.monomials, new Monomial());
-        this.monomials[0] = new Monomial(coefficient, variable);
-    }
-
-    private Polynomial(final boolean isValid) {
-        this.monomials = new Monomial[1];
-        //noinspection AssignmentToNull
+    /**
+     * Creates the invalid polynomial.
+     */
+    private Polynomial() {
+        // Call the other constructor
+        this(new Monomial[1], 0, 0, false);
+        // Initialize the monomials
         this.monomials[0] = new Monomial();
-        this.constantCoefficient = 0;
-        this.monomialCount = 0;
-        this.isConstantPolynomial = false;
-        this.valid = isValid;
     }
 
+    /**
+     * Creates a new polynomial with the given monomial.
+     *
+     * @param monomials Array of monomials. This array is cloned, so, modify the specify
+     *         array after constructing this object does not affect the saved array.
+     * @param constantCoefficient Value of the constant monomial.
+     * @param monomialsCount Maximum allowed monomials, constant monomial excluded.
+     * @param isConstantPolynomial {@code true} if this polynomial represents a constant
+     *         value, false otherwise.
+     */
     Polynomial(
         @NotNull final Monomial[] monomials,
         final int constantCoefficient,
-        final int monomialCount,
+        final int monomialsCount,
         final boolean isConstantPolynomial
     ) {
-        this.monomials = monomials;
+        // Initialize the polynomial
+        this.monomials = monomials.clone();
         this.constantCoefficient = constantCoefficient;
-        this.monomialCount = monomialCount;
+        this.monomialsCount = monomialsCount;
         this.isConstantPolynomial = isConstantPolynomial;
-        this.valid = true;
     }
 
+    /**
+     * Returns {@code false} if this polynomial is the invalid polynomial {@link
+     * Polynomial#INVALID}, {@code true} otherwise.
+     *
+     * @return {@code false} if this polynomial is the invalid polynomial, {@code true} otherwise.
+     */
     public boolean isValid() {
-        return this.valid;
+        // Check if this polynomial is invalid
+        return this != Polynomial.INVALID;
     }
 
+    /**
+     * Returns the number of non-null monomials in this polynomial, constant monomial (i.e.,
+     * monomial of degree 0) excluded.
+     *
+     * @return The number of non-null monomials in this polynomial.
+     * @throws IllegalStateException If this method is called on the invalid polynomial.
+     */
     public int getSize() {
-        if (this.valid) {
-            int i = this.monomialCount - 1;
-            boolean found = false;
-            while ((i >= 0) && !found) {
-                if (!this.monomials[i].isNull()) {
-                    found = true;
-                } else {
+        // Check if this polynomial is invalid
+        if (this.isValid()) {
+            // Find the first non-null monomial
+            int i = this.monomialsCount - 1;
+            boolean continueSearch = true;
+            while ((i >= 0) && continueSearch) {
+                if (this.monomials[i].isNull()) {
                     i--;
+                } else {
+                    continueSearch = false;
                 }
             }
+            // Return the index of the first non-null monomial
             return i + 1;
         }
-        throw new IllegalStateException("Null polynomial!");
+        throw new IllegalStateException("Cannot invoke getSize() on the invalid polynomial");
     }
 
+    /**
+     * Returns {@code true} if this polynomial is constant, {@code false} otherwise. The invalid
+     * polynomial is considered non-constant.
+     *
+     * @return {@code true} if this polynomial is constant, {@code false} otherwise.
+     */
     public boolean isConstantPolynomial() {
-        return this.isConstantPolynomial && this.valid;
+        return this.isConstantPolynomial && this.isValid();
     }
 
+    /**
+     * Returns the coefficient of the constant monomial (i.e., the monomial with degree 0).
+     *
+     * @return The coefficient of the constant monomial.
+     * @throws IllegalStateException If this method is called on the invalid polynomial.
+     */
     public int getConstantCoefficient() {
-        if (this.valid) {
+        if (this.isValid()) {
             return this.constantCoefficient;
         }
-        throw new IllegalStateException("Null polynomial!");
+        throw new IllegalStateException(
+            "Cannot extract the constant coefficient on the invalid polynomial"
+        );
     }
 
+    /**
+     * Returns the monomial at the specified index. Note that there is no implicit order in the
+     * monomials.
+     *
+     * @param index The index of the requested monomial.
+     * @return The requested monomial.
+     * @throws IllegalArgumentException If {@code index < 0}, if {@code index >= monomialsCount}, or
+     *                                  if the monomial at the specified is a null monomial.
+     */
     @NotNull
     public Monomial getMonomial(final int index) {
-        if (this.valid && (index >= 0)) {
-            final Monomial requestedMonomial = this.monomials[index];
-            if (!requestedMonomial.isNull()) {
-                return requestedMonomial;
+        // Check if the polynomial is valid
+        if (this.isValid()) {
+            // Check if the index is valid
+            if ((index >= 0) && (index < this.monomialsCount)) {
+                // Extract the monomial
+                final Monomial requestedMonomial = this.monomials[index];
+                // Return only non-null monomials
+                if (!requestedMonomial.isNull()) {
+                    return requestedMonomial;
+                }
+                throw new IllegalArgumentException("Monomial at index " + index + " is null");
             }
+            throw new IllegalArgumentException(
+                "Invalid index " +
+                index +
+                ": it must be greater than or equal to 0 and must " +
+                "be less than than monomialsCount"
+            );
         }
-        throw new IllegalArgumentException("Invalid index " + index);
+        throw new IllegalStateException("Cannot extract monomials from the invalid polynomial");
     }
 
+    /**
+     * Utility method that checks if this polynomial is divisible by the specified constant. A
+     * polynomial is considered divisible by an integer constant if and only if all the monomials
+     * coefficients (excluding the constant monomial) are multiples of the constant.<br> If the
+     * constant is 0, then the polynomial is not divisible.
+     *
+     * @param constant The constant to check.
+     * @return {@code true} if this polynomial is divisible by the specified constant, false
+     *         otherwise.
+     */
     private boolean isDivisible(final int constant) {
         boolean isDivisible = constant != 0;
         int i = 0;
-        while ((i < this.monomialCount) && isDivisible) {
+        // Check that all monomials are multiples of the specified constant
+        while ((i < this.monomialsCount) && isDivisible) {
             isDivisible = ((this.monomials[i].getCoefficient() % constant) == 0);
             i++;
         }
-        return true;
+        return isDivisible;
     }
 
+    /**
+     * Computes the result of the division of this polynomial by the given constant. The division is
+     * possible if and only if the specified constant is not 0 and all the monomials coefficients
+     * (excluding the constant monomial) are multiples of the constant.<br> The invalid polynomial
+     * is not divisible.
+     *
+     * @param constant The constant to divide this polynomial by.
+     * @return The result of the division, or {@link Polynomial#INVALID} if the division is not
+     *         possible.
+     */
     @NotNull
     public Polynomial divide(final int constant) {
-        if (this.valid && this.isDivisible(constant)) {
-            final Monomial[] newMonomials = new Monomial[this.monomialCount];
-            Arrays.fill(newMonomials, new Monomial());
+        // Check if the division can be performed
+        if (this.isValid() && this.isDivisible(constant)) {
+            // Creates the new monomials
+            final Monomial[] newMonomials = IntStream
+                .range(0, this.monomialsCount)
+                .mapToObj(i -> this.monomials[i].divide(constant))
+                .toArray(Monomial[]::new);
 
-            for (int i = 0; i < this.monomialCount; i++) {
-                newMonomials[i] = this.monomials[i].divide(constant);
-            }
+            // Compute the new coefficient
             final int newCoefficient = this.constantCoefficient / constant;
             return new Polynomial(
                 newMonomials,
                 newCoefficient,
-                this.monomialCount,
+                this.monomialsCount,
                 this.isConstantPolynomial
             );
         }
-
+        // The division is not possible
         return Polynomial.INVALID;
     }
 
+    /**
+     * Computes the result of this polynomial modulo the specified constant. This operation can be
+     * performed only if all the monomials coefficients (excluding the constant monomials) are
+     * multiples of the specified constant.<br> This operation, applied to the invalid polynomial,
+     * gives the invalid polynomial as result.<br>Note that whatever monomial modulo a constant, if
+     * its coefficient is a multiple of such constant, gives as result 0.
+     *
+     * @param constant The constant to use for the modulo operation.
+     * @return The result of the modulo operation, or {@link Polynomial#INVALID} if the operation
+     *         cannot be performed.
+     */
     @NotNull
     public Polynomial modulo(final int constant) {
-        if (this.valid && this.isDivisible(constant)) {
-            final Monomial[] newMonomials = new Monomial[this.monomialCount];
+        // Check if the operation can be performed
+        if (this.isValid() && this.isDivisible(constant)) {
+            // Clear all the monomials
+            final Monomial[] newMonomials = new Monomial[this.monomialsCount];
             Arrays.fill(newMonomials, new Monomial());
 
+            // Apply the modulo operation only to the constant coefficient
             return new Polynomial(newMonomials, this.constantCoefficient % constant, 0, true);
         }
         return Polynomial.INVALID;
     }
 
+    /**
+     * Multiplies this polynomial by the specified constant.<br> Multiply the invalid polynomial
+     * gives as result the invalid polynomial.
+     *
+     * @param constant The constant this polynomial will be multiplied by.
+     * @return The result of the multiplication.
+     */
     @NotNull
     public Polynomial multiply(final int constant) {
-        if (this.valid) {
-            final Monomial[] newMonomials = new Monomial[this.monomialCount];
-            Arrays.fill(newMonomials, new Monomial());
-
-            final boolean isNewPolynomialConstant = (this.isConstantPolynomial) || (constant == 0);
-            for (int i = 0; i < this.monomialCount; i++) {
-                if (!isNewPolynomialConstant) {
-                    newMonomials[i] = this.monomials[i].multiply(constant);
-                }
+        // CHeck if the polynomial is valid
+        if (this.isValid()) {
+            // Create the monomials container
+            final Monomial[] newMonomials;
+            final boolean isResultConstant = (this.isConstantPolynomial) || (constant == 0);
+            // Check whether the result polynomial will be constant
+            if (isResultConstant) {
+                newMonomials = new Monomial[this.monomialsCount];
+                // Clear all the monomials
+                Arrays.fill(newMonomials, new Monomial());
+            } else {
+                // Multiply all the monomials
+                newMonomials =
+                    IntStream
+                        .range(0, this.monomialsCount)
+                        .mapToObj(i -> this.monomials[i].multiply(constant))
+                        .toArray(Monomial[]::new);
             }
+
+            // Compute the new coefficient
             final int newCoefficient = this.constantCoefficient * constant;
 
+            // Create the result
             return new Polynomial(
                 newMonomials,
                 newCoefficient,
-                this.monomialCount,
-                isNewPolynomialConstant
+                this.monomialsCount,
+                isResultConstant
             );
         }
         return Polynomial.INVALID;
     }
 
+    /**
+     * Computes the negation of this polynomial. Apply this operation to the invalid polynomial has
+     * no effect.
+     *
+     * @return The negation of this polynomial.
+     */
     @NotNull
-    public Polynomial invert() {
-        // - (polyno)
-        if (this.valid) {
-            final Monomial[] newMonomials = new Monomial[this.monomialCount];
-            Arrays.fill(newMonomials, new Monomial());
-            for (int i = 0; i < this.monomialCount; i++) {
-                newMonomials[i] = this.monomials[i].invert();
-            }
-            final int newConstantCoefficient = -this.constantCoefficient;
+    public Polynomial negate() {
+        // Check if the polynomial is valid
+        if (this.isValid()) {
+            // Negate the monomials
+            final Monomial[] newMonomials = IntStream
+                .range(0, this.monomialsCount)
+                .mapToObj(i -> this.monomials[i].negate())
+                .toArray(Monomial[]::new);
+            // Negate the constant
+            final int resultConstant = -this.constantCoefficient;
+
+            // Create te result
             return new Polynomial(
                 newMonomials,
-                newConstantCoefficient,
-                this.monomialCount,
+                resultConstant,
+                this.monomialsCount,
                 this.isConstantPolynomial
             );
         }
         return Polynomial.INVALID;
     }
 
+    /**
+     * Computes the sum of this polynomial and the specified one. If at least one of the two
+     * polynomials is invalid or if the result needs more than {@code monomialsCount} monomials,
+     * then the result is the invalid polynomial.
+     *
+     * @param otherPolynomial The polynomial to sum to this one.
+     * @return The result of the sum of this polynomial and the specified one.
+     */
+    @SuppressWarnings("FeatureEnvy")
     @NotNull
-    public Polynomial add(final Polynomial otherPolynomial) {
-        if (this.valid && otherPolynomial.valid) {
-            final Monomial[] newMonomials = new Monomial[this.monomialCount];
-            Arrays.fill(newMonomials, new Monomial());
-
-            final boolean[] monomialAdded = new boolean[otherPolynomial.monomialCount];
-            int nextMonomialIndex = 0;
-            for (int i = 0; i < this.monomialCount; i++) {
-                //final Monomial monomial : this.monomials
-                boolean added = false;
-                int j = 0;
-                while ((j < otherPolynomial.monomialCount) && !added) {
-                    if (!monomialAdded[j]) {
-                        final Monomial result =
-                            this.monomials[i].tryAdd(otherPolynomial.monomials[j]);
-                        if ((result != null)) {
-                            if (!result.isNull()) {
-                                newMonomials[nextMonomialIndex] = result;
-                                nextMonomialIndex++;
-                            }
-                            monomialAdded[j] = true;
-                            added = true;
-                        }
-                    }
-                    j++;
-                }
-                if (!added) {
-                    return Polynomial.INVALID;
-                }
-            }
-            final int newCoefficient =
-                this.constantCoefficient + otherPolynomial.constantCoefficient;
-
-            final boolean isNewPolynomialConstant = newMonomials[0].isNull();
-
-            return new Polynomial(
-                newMonomials,
-                newCoefficient,
-                this.monomialCount,
-                isNewPolynomialConstant
-            );
+    public Polynomial sum(@NotNull final Polynomial otherPolynomial) {
+        // Check if both polynomials are valid
+        if (!this.isValid() || !otherPolynomial.isValid()) {
+            return Polynomial.INVALID;
         }
-        return Polynomial.INVALID;
+        // Create the result container
+        final Monomial[] newMonomials = new Monomial[this.monomialsCount];
+        Arrays.fill(newMonomials, new Monomial());
+        // Clone the monomials to add, so to delete them when added
+        @Nullable
+        final Monomial[] monomialsToSum = otherPolynomial.monomials.clone();
+        // Try to sum all the monomials
+        int nextMonomialIndex = 0;
+        for (int i = 0; i < this.monomialsCount; i++) {
+            // Find a monomial with the same variable or a null monomial
+            boolean toSum = true;
+            int j = 0;
+            while ((j < otherPolynomial.monomialsCount) && toSum) {
+                // Extract the monomial to add
+                final Monomial monomialToAdd = monomialsToSum[j];
+                // Check if it has already been added
+                if (monomialToAdd != null) {
+                    // Try to sum the monomials
+                    final Monomial result = this.monomials[i].trySum(monomialToAdd);
+                    // Check if the sum has been performed
+                    if (result != null) {
+                        // Add the monomial is it is not null
+                        if (!result.isNull()) {
+                            newMonomials[nextMonomialIndex] = result;
+                            nextMonomialIndex++;
+                        }
+                        // Delete the added monomial
+                        //noinspection AssignmentToNull
+                        monomialsToSum[j] = null;
+                        toSum = false;
+                    }
+                }
+                j++;
+            }
+            // Check if the monomial has been correctly summed
+            if (toSum) {
+                return Polynomial.INVALID;
+            }
+        }
+        // Compute the new constant coefficient
+        final int newConstant = this.constantCoefficient + otherPolynomial.constantCoefficient;
+
+        // Return the result
+        return new Polynomial(
+            newMonomials,
+            newConstant,
+            this.monomialsCount,
+            newMonomials[0].isNull()
+        );
     }
 
+    /**
+     * Computes the subtraction of this polynomial and the specified one. If at least one of the two
+     * polynomials is invalid or if the result needs more than {@code monomialsCount} monomials,
+     * then the result is the invalid polynomial.
+     *
+     * @param otherPolynomial The polynomial to subtract to this one.
+     * @return The result of the subtraction.
+     */
     @NotNull
-    public Polynomial subtract(final Polynomial otherPolynomial) {
-        return this.invert().add(otherPolynomial).invert();
+    public Polynomial subtract(@NotNull final Polynomial otherPolynomial) {
+        // Compute -((-this) + otherPolynomial)
+        return this.negate().sum(otherPolynomial).negate();
     }
 
+    /**
+     * Returns a string representation of this polynomial.
+     *
+     * @return A string representation of this polynomial.
+     */
+    @SuppressWarnings("FeatureEnvy")
     @NotNull
     @Override
     public String toString() {
-        int size = 0;
-        boolean found = false;
-        while ((size < this.monomialCount) && !found) {
-            if (this.monomials[size].isNull()) {
-                found = true;
-            } else {
-                size++;
-            }
+        // Manage the invalid polynomial
+        if (!this.isValid()) {
+            return " Polynomial [INVALID]";
         }
+        // Print the size and monomialsCount
+        final StringBuilder builder = new StringBuilder("Polynomial [")
+            .append(this.getSize())
+            .append('/')
+            .append(this.monomialsCount)
+            .append(']')
+            .append(" { ");
 
-        final StringBuilder builder = new StringBuilder("Polynomial[");
-        builder.append(size).append("/").append(this.monomialCount).append("]").append(" { ");
-        if (this.valid) {
-            boolean first = true;
-            for (final Monomial monomial : this.monomials) {
-                if (!monomial.isNull()) {
-                    if ((monomial.getCoefficient() >= 0) && !first) {
-                        builder.append(" + ");
-                    } else {
-                        if (monomial.getCoefficient() < 0) {
-                            builder.append(" -");
-                        }
-                        if (!first) {
-                            builder.append(" ");
-                        }
-                    }
-                    builder
-                        .append(Math.abs(monomial.getCoefficient()))
-                        .append(monomial.getVariable());
-                    first = false;
+        // Print the monomials
+        for (int i = 0; i < this.getSize(); i++) {
+            // Extract the monomial
+            final Monomial monomial = this.monomials[i];
+            // Skip null monomials
+
+            // Add the sign
+            if ((monomial.getCoefficient() >= 0) && (i > 0)) {
+                builder.append(" + ");
+            }
+            if (monomial.getCoefficient() < 0) {
+                builder.append('-');
+                if (i > 0) {
+                    builder.append(' ');
                 }
             }
-
-            if ((this.constantCoefficient >= 0) && !first) {
-                builder.append(" + ");
-            } else if (this.constantCoefficient < 0) {
-                builder.append(" - ");
-            }
-
-            builder.append(Math.abs(this.constantCoefficient));
-            builder.append(" }");
-            if (this.isConstantPolynomial) {
-                builder.append(" : const");
-            }
+            // Append the monomial
+            builder
+                .append(Math.abs(monomial.getCoefficient()))
+                .append(" · ")
+                .append(monomial.getVariable())
+                .append(' ');
+        }
+        // Append the constant
+        if (this.getSize() == 0) {
+            builder.append(' ');
+        }
+        if (this.constantCoefficient < 0) {
+            builder.append("- ");
         } else {
-            builder.append("INVALID}");
+            builder.append("+ ");
+        }
+        builder.append(Math.abs(this.constantCoefficient));
+        builder.append(" }");
+        // Check if the polynomial is constant
+        if (this.isConstantPolynomial) {
+            builder.append(" : const");
         }
 
+        // Return the representation
         return builder.toString();
     }
 }

@@ -1,7 +1,5 @@
 package it.unive.lisa.test.stripes;
 
-import static org.hamcrest.CoreMatchers.is;
-
 import it.unive.lisa.AnalysisException;
 import it.unive.lisa.LiSA;
 import it.unive.lisa.LiSAConfiguration;
@@ -10,7 +8,6 @@ import it.unive.lisa.analysis.AbstractState;
 import it.unive.lisa.analysis.BaseLattice;
 import it.unive.lisa.analysis.SemanticException;
 import it.unive.lisa.analysis.heap.HeapDomain;
-import it.unive.lisa.analysis.nonrelational.value.stripes.Simplifier;
 import it.unive.lisa.analysis.nonrelational.value.stripes.StripesDomain;
 import it.unive.lisa.analysis.nonrelational.value.stripes.polinomial.Monomial;
 import it.unive.lisa.analysis.nonrelational.value.stripes.polinomial.Polynomial;
@@ -22,11 +19,15 @@ import it.unive.lisa.program.cfg.statement.Assignment;
 import it.unive.lisa.symbolic.value.Identifier;
 import it.unive.lisa.symbolic.value.ValueExpression;
 import it.unive.lisa.symbolic.value.Variable;
+import it.unive.lisa.test.stripes.simplifier.OldMonomial;
+import it.unive.lisa.test.stripes.simplifier.OldPolynomial;
 import it.unive.lisa.test.stripes.simplifier.OldSimplifier;
+import it.unive.lisa.test.stripes.simplifier.OldSimplifier2;
 import it.unive.lisa.test.stripes.simplifier.SimplificationResult;
-
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.hamcrest.CoreMatchers.is;
 
 /**
  * Description.
@@ -43,17 +44,17 @@ public class StripesDomainOldTest {
         implements ValueDomain<TestDomain> {
 
         @Override
-        protected TestDomain lubAux(final TestDomain other) throws SemanticException {
+        protected TestDomain lubAux(final TestDomain other) {
             return this;
         }
 
         @Override
-        protected TestDomain wideningAux(final TestDomain other) throws SemanticException {
+        protected TestDomain wideningAux(final TestDomain other) {
             return this;
         }
 
         @Override
-        protected boolean lessOrEqualAux(final TestDomain other) throws SemanticException {
+        protected boolean lessOrEqualAux(final TestDomain other) {
             return false;
         }
 
@@ -88,12 +89,12 @@ public class StripesDomainOldTest {
             final Identifier id,
             final ValueExpression expression,
             final ProgramPoint pp
-        ) throws SemanticException {
+        ) {
             if ((pp instanceof Assignment) && (id instanceof Variable variable)) {
                 System.out.println("asdsdfnnn");
 
                 final SimplificationResult result1 = OldSimplifier.simplify(expression);
-                final Polynomial result2 = Simplifier.simplify(expression, 2);
+                final OldPolynomial result2 = OldSimplifier2.simplify(expression, 2);
 
                 if (result1 == null) {
                     Assert.assertThat("Result are different!", !result2.isValid(), is(true));
@@ -106,14 +107,14 @@ public class StripesDomainOldTest {
 
                     Assert.assertThat(
                         "Constants are different in expression " + expression,
-                        result2.getConstantCoefficient(),
+                        result2.getConstant(),
                         is(constant)
                     );
 
                     if ((firstVariable == null) && (secondVariable == null)) {
                         Assert.assertThat(
                             "Result is not constant in expression " + expression,
-                            result2.isConstantPolynomial(),
+                            result2.isConstant(),
                             is(true)
                         );
                     } else if ((firstVariable != null) && (secondVariable == null)) {
@@ -123,7 +124,7 @@ public class StripesDomainOldTest {
                             is((firstIdentifierCount == 0) ? 0 : 1)
                         );
                         if (firstIdentifierCount != 0) {
-                            final Monomial monomial = result2.getMonomial(0);
+                            final OldMonomial monomial = result2.getMonomial(0);
                             Assert.assertThat(
                                 "Monomials are different in expression " + expression,
                                 monomial.getVariable(),
@@ -142,8 +143,8 @@ public class StripesDomainOldTest {
                             is(2)
                         );
 
-                        final Monomial firstMonomial = result2.getMonomial(0);
-                        final Monomial secondMonomial = result2.getMonomial(1);
+                        final OldMonomial firstMonomial = result2.getMonomial(0);
+                        final OldMonomial secondMonomial = result2.getMonomial(1);
 
                         if (firstMonomial.getVariable().equals(firstVariable)) {
                             Assert.assertThat(
@@ -204,19 +205,17 @@ public class StripesDomainOldTest {
         }
 
         @Override
-        public TestDomain assume(final ValueExpression expression, final ProgramPoint pp)
-            throws SemanticException {
+        public TestDomain assume(final ValueExpression expression, final ProgramPoint pp) {
             return this;
         }
 
         @Override
-        public TestDomain forgetIdentifier(final Identifier id) throws SemanticException {
+        public TestDomain forgetIdentifier(final Identifier id) {
             return this;
         }
 
         @Override
-        public Satisfiability satisfies(final ValueExpression expression, final ProgramPoint pp)
-            throws SemanticException {
+        public Satisfiability satisfies(final ValueExpression expression, final ProgramPoint pp) {
             return Satisfiability.UNKNOWN;
         }
 

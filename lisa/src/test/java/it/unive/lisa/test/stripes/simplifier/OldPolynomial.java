@@ -91,7 +91,7 @@ public class OldPolynomial {
         if (this.valid && (index >= 0) && (index < this.size)) {
             return this.monomials[index];
         }
-        throw new IllegalArgumentException("Invalid index " + index);
+        throw new IllegalArgumentException("Invalid monomial index " + index);
     }
 
     private boolean isDivisible(final int constant) {
@@ -233,7 +233,7 @@ public class OldPolynomial {
             builder.append(Math.abs(this.constant));
             builder.append(" }");
             if (this.isConstant) {
-                builder.append(" : const");
+                builder.append(" : constant");
             }
         } else {
             builder.append("INVALID}");

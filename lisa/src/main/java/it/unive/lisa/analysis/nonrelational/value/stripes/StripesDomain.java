@@ -1,7 +1,6 @@
 package it.unive.lisa.analysis.nonrelational.value.stripes;
 
 import it.unive.lisa.analysis.BaseLattice;
-import it.unive.lisa.analysis.SemanticException;
 import it.unive.lisa.analysis.nonrelational.value.stripes.polinomial.Monomial;
 import it.unive.lisa.analysis.nonrelational.value.stripes.polinomial.Polynomial;
 import it.unive.lisa.analysis.value.ValueDomain;
@@ -12,6 +11,7 @@ import it.unive.lisa.symbolic.value.HeapLocation;
 import it.unive.lisa.symbolic.value.Identifier;
 import it.unive.lisa.symbolic.value.ValueExpression;
 import it.unive.lisa.symbolic.value.Variable;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,7 +19,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collector;
@@ -30,135 +29,235 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
 /**
- * Description.
+ * Class that implements the Stripes abstract domain.
  *
- * @author DeB
- * @version 1.0 2021-04-17
- * @since version date
+ * @author Alessio De Biasi
+ * @author Jonathan Gobbo
+ * @version 1.5.1 2021-06-30
+ * @since 1.5 2021-04-17
  */
 public class StripesDomain
     extends BaseLattice<StripesDomain>
     implements ValueDomain<StripesDomain> {
 
-    private static final StripesDomain TOP = new StripesDomain();
+    /**
+     * Top domain element.
+     */
+    @NotNull
+    private static final StripesDomain TOP_ELEMENT = new StripesDomain();
 
-    private static final StripesDomain BOTTOM = new StripesDomain();
+    /**
+     * Bottom domain element.
+     */
+    @NotNull
+    private static final StripesDomain BOTTOM_ELEMENT = new StripesDomain();
 
+    /**
+     * Map that contains all the tracked variables associated to their constraints.
+     */
     @NotNull
     @Unmodifiable
-    private final Map<@NotNull Variable, @Unmodifiable @NotNull Set<@NotNull Constraint>> domainElements;
+    private final Map<@NotNull Variable,
+            @Unmodifiable @NotNull Set<@NotNull Constraint>> trackedConstraints;
 
-    private StripesDomain(
-        @Unmodifiable @NotNull final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> domainElements
-    ) {
-        this.domainElements = domainElements;
-    }
-
+    /**
+     * Creates an empty abstract domain. This constructor is used to instantiate the domain and run
+     * the analysis.
+     */
     public StripesDomain() {
-        this.domainElements = new HashMap<>();
+        this(new HashMap<>());
     }
 
+    /**
+     * Creates a new abstract domain with the specified constraints.
+     *
+     * @param trackedConstraints The constraints to track.
+     */
+    private StripesDomain(
+        @Unmodifiable @NotNull final Map<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> trackedConstraints
+    ) {
+        // Save the map
+        this.trackedConstraints = trackedConstraints;
+    }
+
+    /**
+     * Returns the top element.
+     *
+     * @return The top element.
+     */
+    @Override
+    @NotNull
+    public StripesDomain top() {
+        return StripesDomain.TOP_ELEMENT;
+    }
+
+    /**
+     * Check if this domain element is the top element.
+     *
+     * @return {@code true} if this element is the top element, {@code false} otherwise.
+     */
     @Override
     public boolean isTop() {
-        return this.domainElements.isEmpty() && (this != StripesDomain.BOTTOM);
+        //noinspection ObjectEquality
+        return this.trackedConstraints.isEmpty() && (this != StripesDomain.BOTTOM_ELEMENT);
     }
 
+    /**
+     * Returns the bottom element.
+     *
+     * @return The bottom element.
+     */
     @Override
-    public StripesDomain top() {
-        return StripesDomain.TOP;
+    @NotNull
+    public StripesDomain bottom() {
+        return StripesDomain.BOTTOM_ELEMENT;
     }
 
+    /**
+     * Check if this domain element is the bottom element.
+     *
+     * @return {@code true} if this element is the bottom element, {@code false} otherwise.
+     */
     @Override
     public boolean isBottom() {
-        return this == StripesDomain.BOTTOM; //this.domainElements.isEmpty() && this.isBottom;
+        //noinspection ObjectEquality
+        return this == StripesDomain.BOTTOM_ELEMENT;
     }
 
+    /**
+     * Performs the least upper bound operation between this domain element and the specified one.
+     *
+     * @param other The other lattice element.
+     * @return The least upper bound between this domain element and the specified one.
+     */
+    @SuppressWarnings("FeatureEnvy")
     @Override
-    public StripesDomain bottom() {
-        return StripesDomain.BOTTOM;
-    }
+    @NotNull
+    protected StripesDomain lubAux(final StripesDomain other) {
+        // Clear the result
+        final Map<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> newDomainElements =
+                new HashMap<>();
 
-    @Override
-    protected StripesDomain lubAux(final StripesDomain other) throws SemanticException { // [z ->
-        // {(y, x, 20, 4), (y, /, 0, 14)}]
-        final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newDomainElements = new HashMap<>();
-
-        for (final Entry<@NotNull Variable, @NotNull Set<@NotNull Constraint>> element : this.domainElements.entrySet()) {
-            // element = [z -> {(y, x, 20, 4)}]
+        // Loop over the tracked variables
+        for (final Entry<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> element :
+                this.trackedConstraints.entrySet()) {
+            // Extract the constraints
+            @Unmodifiable
             final Set<@NotNull Constraint> elementConstraints = element.getValue();
-            @Nullable
-            final Set<@NotNull Constraint> otherElementConstraints = other.domainElements.get(
-                element.getKey()
+            // Get the constraints defined on the same variable on the other element
+            @Unmodifiable
+            final Set<@NotNull Constraint> otherConstraints = other.trackedConstraints.getOrDefault(
+                element.getKey(),
+                Collections.emptySet()
             );
 
-            // otherElementConstraints = {(y, x, 20, 4), (y, /, 0, 14)}
-            if (otherElementConstraints != null) {
-                final Set<@NotNull Constraint> newConstraints = new HashSet<>();
-                for (final Constraint c : elementConstraints) {
-                    for (final Constraint otherC : otherElementConstraints) {
-                        if (c.differsOnlyOnK2(otherC)) {
-                            if (c.getK2() < otherC.getK2()) {
-                                newConstraints.add(c);
-                            } else {
-                                newConstraints.add(otherC);
-                            }
-                            break;
+            // Merge the constraints
+            //noinspection ObjectAllocationInLoop
+            final Set<@NotNull Constraint> newConstraints = new HashSet<>();
+            // Loop over the constraints associated to the variable in this domain element
+            for (final Constraint elementConstraint : elementConstraints) {
+                // Loop over the constraints associated to the variable in this domain element
+                for (final Constraint otherConstraint : otherConstraints) {
+                    // Keep the wider constraint
+                    if (elementConstraint.differsOnlyOnK2(otherConstraint)) {
+                        if (elementConstraint.getK2() < otherConstraint.getK2()) {
+                            newConstraints.add(elementConstraint);
+                        } else {
+                            newConstraints.add(otherConstraint);
                         }
+                        break;
                     }
                 }
-                if (!newConstraints.isEmpty()) {
-                    newDomainElements.put(
-                        element.getKey(),
-                        Collections.unmodifiableSet(newConstraints)
-                    );
-                }
             }
-        }
-
-        if (newDomainElements.isEmpty()) {
-            return StripesDomain.TOP;
-        }
-        return new StripesDomain(Collections.unmodifiableMap(newDomainElements));
-    }
-
-    @Override
-    protected StripesDomain wideningAux(final StripesDomain other) throws SemanticException {
-        final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newDomainElements = new HashMap<>();
-
-        for (final Entry<@NotNull Variable, @NotNull Set<@NotNull Constraint>> element : this.domainElements.entrySet()) {
-            // element = [z -> {(y, x, 20, 4)}]
-            final Set<@NotNull Constraint> elementConstraints = element.getValue();
-            @Nullable
-            final Set<@NotNull Constraint> otherElementConstraints = other.domainElements.get(
-                element.getKey()
-            );
-            if (otherElementConstraints != null) {
-                final Set<Constraint> newConstraints = new HashSet<>(elementConstraints);
-                newConstraints.retainAll(otherElementConstraints);
+            // Add the new constraints, if there are
+            if (!newConstraints.isEmpty()) {
                 newDomainElements.put(
                     element.getKey(),
                     Collections.unmodifiableSet(newConstraints)
                 );
             }
         }
-
+        // Check if there are tracked constraints
         if (newDomainElements.isEmpty()) {
-            return StripesDomain.TOP;
+            return StripesDomain.TOP_ELEMENT;
         }
+        // Create the new domain element
         return new StripesDomain(Collections.unmodifiableMap(newDomainElements));
     }
 
-    // this <= other
+    /**
+     * Performs the widening operation between this domain element and the specified one.
+     *
+     * @param other The other lattice element
+     * @return The result of the widening operation.
+     */
     @Override
-    protected boolean lessOrEqualAux(final StripesDomain other) throws SemanticException {
-        for (final Entry<@NotNull Variable, @NotNull Set<@NotNull Constraint>> otherElements : other.domainElements.entrySet()) {
+    @NotNull
+    protected StripesDomain wideningAux(final StripesDomain other) {
+        // Clear the result
+        final Map<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> newDomainElements =
+                new HashMap<>();
+
+        // Loop over the tracked variables
+        for (final Entry<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> element :
+                this.trackedConstraints.entrySet()) {
+            // Extract the constraints associated to the variable in this domain element
+            final Set<@NotNull Constraint> elementConstraints = element.getValue();
+            // Extract the constraints associated to the variable in the other domain element
+            @Nullable
+            final Set<@NotNull Constraint> otherConstraints = other.trackedConstraints.get(
+                element.getKey()
+            );
+            // Check if the variable is tracked in both domain elements
+            if (otherConstraints != null) {
+                // Retain the common constraints
+                //noinspection ObjectAllocationInLoop
+                final Set<@NotNull Constraint> newConstraints = new HashSet<>(elementConstraints);
+                newConstraints.retainAll(otherConstraints);
+                newDomainElements.put(
+                    element.getKey(),
+                    Collections.unmodifiableSet(newConstraints)
+                );
+            }
+        }
+        // Check if there are tracked constraints
+        if (newDomainElements.isEmpty()) {
+            return StripesDomain.TOP_ELEMENT;
+        }
+        // Create the new domain element
+        return new StripesDomain(Collections.unmodifiableMap(newDomainElements));
+    }
+
+    /**
+     * Checks if this domain element is less or equal the specified one.
+     *
+     * @param other The other lattice element
+     * @return {@code true} if this element is less that or equal to the other, {@code false}
+     *         otherwise.
+     */
+    @SuppressWarnings({ "FeatureEnvy", "MethodWithMultipleReturnPoints" })
+    @Override
+    protected boolean lessOrEqualAux(final StripesDomain other) {
+        // Loop over tracked variables
+        for (final Entry<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> otherElements :
+                other.trackedConstraints.entrySet()) {
+            // Extract the constraints associated to the variable in this domain element
             final Set<@NotNull Constraint> otherConstraints = otherElements.getValue();
+            // Extract the constraints associated to the variable in the other domain element
             @Nullable
             final Set<@NotNull Constraint> elementConstraints =
-                this.domainElements.get(otherElements.getKey());
-
+                this.trackedConstraints.get(otherElements.getKey());
+            // Check if the variable is tracked in the other domain element
             if (elementConstraints != null) {
+                // Loop over the constraints associated to the variable in the other domain element
                 for (final Constraint otherConstraint : otherConstraints) {
+                    // No constraint has to be wider than the ones in other domain element
                     if (
                         elementConstraints
                             .stream()
@@ -179,35 +278,56 @@ public class StripesDomain
         return true;
     }
 
-    @SuppressWarnings("ChainOfInstanceofChecks")
+    /**
+     * Alter the abstract state by effect of the assignment of the specified expression to the
+     * specified variable.
+     *
+     * @param id The identifier to assign the value to
+     * @param expression The expression to assign
+     * @param pp The program point that where this operation is being evaluated
+     * @return The abstract state modified by the assignment.
+     */
+    @SuppressWarnings(
+        {
+            "ChainOfInstanceofChecks",
+            "FeatureEnvy",
+            "MethodWithMultipleReturnPoints",
+            "OverlyComplexMethod",
+            "OverlyCoupledMethod"
+        }
+    )
     @Override
+    @NotNull
     public StripesDomain assign(
         final Identifier id,
         final ValueExpression expression,
         final ProgramPoint pp
-    ) throws SemanticException {
+    ) {
+        // Skip the assignment if the abstract state is bottom
         if (this.isBottom()) {
             return this;
         }
-
+        // Consider only assignments
         if ((pp instanceof Assignment) && (id instanceof Variable assignedVariable)) {
-            Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newDomainElements =
+            // Drop all the constraints that mention the assigned variable
+            Map<@NotNull Variable,
+                    @Unmodifiable @NotNull Set<@NotNull Constraint>> newTrackedConstraints =
                 this.drop(assignedVariable);
-
+            // Simplify the assigned expression
             final Polynomial resultingPolynomial = Simplifier.simplify(expression, 2);
-
-            if (resultingPolynomial.isValid()) {
-                @Nullable
-                final Monomial firstMonomial = (resultingPolynomial.getSize() > 0)
-                    ? resultingPolynomial.getMonomial(0)
-                    : null;
+            // Check if its has been simplified correctly
+            if (resultingPolynomial.isValid() && !resultingPolynomial.isConstantPolynomial()) {
+                // Extract the monomials
+                @NotNull
+                final Monomial firstMonomial = resultingPolynomial.getMonomial(0);
                 @Nullable
                 final Monomial secondMonomial = (resultingPolynomial.getSize() > 1)
                     ? resultingPolynomial.getMonomial(1)
                     : null;
+                // Extract the constant value
                 final int constant = resultingPolynomial.getConstantCoefficient();
+                // Check if the simplified expression is in normalized form
                 if (
-                    (firstMonomial != null) &&
                     (!firstMonomial.isNull()) &&
                     (
                         (secondMonomial == null) ||
@@ -218,11 +338,11 @@ public class StripesDomain
                         (secondMonomial == null) ? null : secondMonomial.getVariable()
                     )
                 ) {
-                    // assign x = y
-                    final Set<@NotNull Constraint> oldConstraints = newDomainElements.get(id);
-                    final List<@NotNull FullConstraint> newConstraints = new LinkedList<>();
-
-                    newConstraints.add(
+                    // Clear the inferred constraints
+                    final Collection<@NotNull FullConstraint> inferredConstraints =
+                            new LinkedList<>();
+                    // Add the constraints extracted from the assignment
+                    inferredConstraints.add(
                         new FullConstraint(
                             assignedVariable,
                             firstMonomial.getVariable(),
@@ -231,80 +351,147 @@ public class StripesDomain
                             constant - 1
                         )
                     );
+                    // Infer new constraints
                     final ConstraintsComputer constraintsComputer = new ConstraintsComputer(
-                        newDomainElements
+                        newTrackedConstraints
                     );
-                    newConstraints.addAll(
-                        constraintsComputer.computeNewAssignmentConstraints(
+                    inferredConstraints.addAll(
+                        constraintsComputer.inferNewAssignmentConstraints(
                             assignedVariable,
                             firstMonomial,
                             secondMonomial,
                             constant
                         )
                     );
-
-                    newDomainElements = Utils.mergeConstraints(newDomainElements, newConstraints);
+                    // Merge the inferred constraints
+                    newTrackedConstraints =
+                        ConstraintsMerger.mergeConstraints(
+                            newTrackedConstraints,
+                            inferredConstraints
+                        );
                 }
-                if ((firstMonomial != null) && (secondMonomial != null)) {
-                    final Monomial positive = (firstMonomial.getCoefficient() >= 0)
-                        ? firstMonomial
-                        : secondMonomial;
-                    final Monomial negative = (firstMonomial.getCoefficient() < 0)
-                        ? firstMonomial
-                        : secondMonomial;
-
-                    if ((positive.getCoefficient() == 1) && (negative.getCoefficient() == -1)) {
-                        
-                        final List<FullConstraint> newConstraints = new LinkedList<>();
-                        
-                        newConstraints.add(new FullConstraint(
-                                positive.getVariable(),
-                                assignedVariable,
-                                negative.getVariable(),
-                                1,
-                                -constant -1
-                        ));
-    
-                        final ConstraintsComputer constraintsComputer = new ConstraintsComputer(
-                                newDomainElements
+                // Check if the exception case applies
+                if (secondMonomial != null) {
+                    // Extract the new constraints
+                    newTrackedConstraints =
+                        StripesDomain.handleExceptionAssignment(
+                            assignedVariable,
+                            newTrackedConstraints,
+                            firstMonomial,
+                            secondMonomial,
+                            constant
                         );
-                        
-                        newConstraints.addAll(
-                                constraintsComputer.computeNewAssignmentConstraints(
-                                        assignedVariable,
-                                        firstMonomial,
-                                        secondMonomial,
-                                        constant
-                                )
-                        );
-    
-                        newDomainElements = Utils.mergeConstraints(newDomainElements, newConstraints);
-                    }
                 }
             }
-            return new StripesDomain(newDomainElements);
+            // Return the new domain element
+            return new StripesDomain(newTrackedConstraints);
         }
+        // Skip other statements
         if ((pp instanceof Return) || (id instanceof HeapLocation)) {
             return this;
         }
-        return StripesDomain.TOP;
+        return StripesDomain.TOP_ELEMENT;
     }
 
-    @NotNull
-    private Map<@NotNull Variable, Set<@NotNull Constraint>> drop(final Variable id) {
-        final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newDomainElements = new HashMap<>();
-        final Predicate<@NotNull Constraint> constraintFilter = constraint ->
-            !constraint.getY().equals(id) && !id.equals(constraint.getZ());
-        final Collector<@NotNull Constraint, ?, @NotNull Set<Constraint>> collector = Collectors.toSet();
+    /**
+     * Handles the assignments in the form <pre>  x=u-v</pre>.
+     *
+     * @param assignedVariable Variable the expression is assigned.
+     * @param newTrackedConstraints The tracked constraints without the ones that mention
+     *         the assigned variable.
+     * @param firstMonomial First monomial of the simplified expression.
+     * @param secondMonomial Second monomial of the simplified expression.
+     * @param constant Constant value of the simplified expression.
+     * @return The new tracked constraints extracted from the assignment.
+     */
+    @SuppressWarnings("FeatureEnvy")
+    private static Map<@NotNull Variable,
+            @Unmodifiable @NotNull Set<@NotNull Constraint>> handleExceptionAssignment(
+        final Variable assignedVariable,
+        final Map<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> newTrackedConstraints,
+        @NotNull final Monomial firstMonomial,
+        @NotNull final Monomial secondMonomial,
+        final int constant
+    ) {
+        /// Extract the positive and negative monomial
+        final Monomial positive = (firstMonomial.getCoefficient() >= 0)
+            ? firstMonomial
+            : secondMonomial;
+        final Monomial negative = (firstMonomial.getCoefficient() < 0)
+            ? firstMonomial
+            : secondMonomial;
 
-        for (final Entry<@NotNull Variable, @NotNull Set<@NotNull Constraint>> element : this.domainElements.entrySet()) {
-            if (!element.getKey().equals(id)) { // Drops the constraints associated to the
-                // assigned variable
+        // Check the coefficient
+        if ((positive.getCoefficient() == 1) && (negative.getCoefficient() == -1)) {
+            // Clear the inferred constraints
+            final Collection<FullConstraint> inferredConstraints = new LinkedList<>();
+            // Add the constraints extracted from the assignment
+            inferredConstraints.add(
+                new FullConstraint(
+                    positive.getVariable(),
+                    assignedVariable,
+                    negative.getVariable(),
+                    1,
+                    -constant - 1
+                )
+            );
+            // Infer new constraints
+            final ConstraintsComputer constraintsComputer = new ConstraintsComputer(
+                newTrackedConstraints
+            );
+            inferredConstraints.addAll(
+                constraintsComputer.inferNewAssignmentConstraints(
+                    assignedVariable,
+                    firstMonomial,
+                    secondMonomial,
+                    constant
+                )
+            );
+            // Return the merged constraints
+            return ConstraintsMerger.mergeConstraints(newTrackedConstraints, inferredConstraints);
+        }
+        // No new constraints have been added
+        return newTrackedConstraints;
+    }
+
+    /**
+     * Drops all the constraints associated to the specified variable from the current abstract
+     * state and return the modified state.
+     *
+     * @param variable Variable the constraints to drop mention.
+     * @return The new tracked constraints where all the constraints that mention the specified
+     *         variable have been dropped.
+     */
+    @SuppressWarnings("FeatureEnvy")
+    @NotNull
+    private Map<@NotNull Variable, @Unmodifiable Set<@NotNull Constraint>> drop(
+        @NotNull final Variable variable
+    ) {
+        // Clear the result
+        final Map<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> newDomainElements =
+                new HashMap<>();
+        // Create the predicate the constraints to remove satisfy
+        final Predicate<@NotNull Constraint> constraintFilter = constraint ->
+            !constraint.getY().equals(variable) && !variable.equals(constraint.getZ());
+        // Define the elements collector
+        final Collector<@NotNull Constraint, ?,
+                @NotNull Set<Constraint>> collector = Collectors.toSet();
+
+        // Loop over the tracked constraints
+        for (final Entry<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> element :
+                this.trackedConstraints.entrySet()) {
+            // Drops the constraints associated to the assigned variable by skipping it
+            if (!element.getKey().equals(variable)) {
+                // Delete all the constraints that mention the specified variable
                 final Set<Constraint> newConstraints = element
                     .getValue()
                     .stream()
                     .filter(constraintFilter)
                     .collect(collector);
+                // In any constraint is retained, add it to the new map
                 if (!newConstraints.isEmpty()) {
                     newDomainElements.put(
                         element.getKey(),
@@ -316,45 +503,74 @@ public class StripesDomain
         return newDomainElements;
     }
 
+    /**
+     * Deletes an identifier and all the information associated to it in this domain element.
+     *
+     * @param id The identifier to forget.
+     * @return The new domain element where the identifier has been forgotten.
+     */
     @Override
-    public StripesDomain forgetIdentifier(final Identifier id) throws SemanticException {
+    @NotNull
+    public StripesDomain forgetIdentifier(final Identifier id) {
+        // Skip if the abstract state is bottom
         if (this.isBottom()) {
             return this;
         }
+        // Pedantic check
         if (id instanceof Variable variable) {
-            final Map<@NotNull Variable, @NotNull Set<@NotNull Constraint>> newDomainElements = new HashMap<>(
-                this.domainElements
-            );
-
-            newDomainElements.remove(variable);
-
-            return new StripesDomain(Collections.unmodifiableMap(newDomainElements));
+            // Drop the constraints that mention the variable to forget
+            return new StripesDomain(Collections.unmodifiableMap(this.drop(variable)));
         }
 
         return this;
     }
 
+    /**
+     * Checks whether the expression is satisfied in this abstract domain element.
+     *
+     * @param expression Rhe expression whose satisfiability is to be evaluated
+     * @param pp The program point that where this operation is being evaluated
+     * @return Always {@link Satisfiability#UNKNOWN}.
+     */
     @Override
-    public Satisfiability satisfies(final ValueExpression expression, final ProgramPoint pp)
-        throws SemanticException {
+    @NotNull
+    public Satisfiability satisfies(final ValueExpression expression, final ProgramPoint pp) {
         return Satisfiability.UNKNOWN;
     }
 
+    /**
+     * Returns a copy of this domain element where the semantic of the given expression has been
+     * applied.
+     *
+     * @param expression The expression whose semantics need to be computed
+     * @param pp The program point that where this operation is being evaluated
+     * @return Always {@code this}.
+     */
     @Override
+    @NotNull
     public StripesDomain smallStepSemantics(
         final ValueExpression expression,
         final ProgramPoint pp
-    ) throws SemanticException {
+    ) {
         return this;
     }
 
+    /**
+     * Returns a copy of this domain element where the given expression is assumed to be true. In
+     * particular, if the expression is proven to be always false, {@link StripesDomain#bottom()} is
+     * returned.
+     *
+     * @param expression The expression to assume to hold.
+     * @param pp The program point that where this operation is being evaluated
+     * @return A copy of this domain element where the given expression is assumed to be true.
+     */
     @Override
-    public StripesDomain assume(final ValueExpression expression, final ProgramPoint pp)
-        throws SemanticException {
+    @NotNull
+    public StripesDomain assume(final ValueExpression expression, final ProgramPoint pp) {
         // Check if the expression is satisfied
-        final List<FullConstraint> newConstraints = new LinkedList<>();
-        final Satisfiability result = new ConditionChecker(this.domainElements)
-            .checkCondition(expression, newConstraints);
+        final List<@NotNull FullConstraint> inferredConstraints = new LinkedList<>();
+        final Satisfiability result = new ConditionChecker(this.trackedConstraints)
+            .checkCondition(expression, inferredConstraints);
         // The condition is guaranteed to be always true
         if (result == Satisfiability.SATISFIED) {
             return this;
@@ -364,145 +580,107 @@ public class StripesDomain
             return this.bottom();
         }
 
-        // Compute new constraints
+        // Infer new constraints
         final ConstraintsComputer constraintsComputer = new ConstraintsComputer(
-            this.domainElements
+            this.trackedConstraints
         );
-        newConstraints.addAll(constraintsComputer.computeNewConditionConstraints(newConstraints));
+        inferredConstraints.addAll(
+            constraintsComputer.inferNewConditionConstraints(inferredConstraints)
+        );
 
         // Add the constraints to the new domain
-        final Map<@NotNull Variable, @Unmodifiable @NotNull Set<@NotNull Constraint>> newDomainElements = Utils.mergeConstraints(
-            this.domainElements,
-            newConstraints
+        @Unmodifiable
+        final Map<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> newTrackedConstraints =
+                ConstraintsMerger.mergeConstraints(
+            this.trackedConstraints,
+            inferredConstraints
         );
-        return new StripesDomain(newDomainElements);
+        // Return the modified domain element
+        return new StripesDomain(newTrackedConstraints);
     }
 
+    /**
+     * Checks if this object is equal to the specified one.
+     *
+     * @param obj The other object.
+     * @return {@code true} if this object is equal to the specified one, {@code false} otherwise.
+     */
     @Override
-    public boolean equals(final Object o) {
-        if (this == o) {
+    public boolean equals(final Object obj) {
+        if (this == obj) {
             return true;
         }
-        if ((o == null) || (this.getClass() != o.getClass())) {
+        if ((obj == null) || (this.getClass() != obj.getClass())) {
             return false;
         }
 
-        final StripesDomain that = (StripesDomain) o;
-
-        return this.domainElements.equals(that.domainElements);
+        final StripesDomain otherStripeDomain = (StripesDomain) obj;
+        // Compare the tracked constraints
+        return this.trackedConstraints.equals(otherStripeDomain.trackedConstraints);
     }
 
+    /**
+     * Computes the has code of this element.
+     *
+     * @return The has code of this element.
+     */
     @Override
     public int hashCode() {
-        return this.domainElements.hashCode();
+        return this.trackedConstraints.hashCode();
     }
 
+    /**
+     * Returns a string representation of this domain element.
+     *
+     * @return A string representation of this domain element.
+     */
     @Override
+    @NotNull
     public String toString() {
         return this.representation();
     }
 
+    /**
+     * Returns a string representation of this domain element.
+     *
+     * @return A string representation of this domain element.
+     */
     @Override
+    @NotNull
     public @NonNls String representation() {
+        // Top
         if (this.isTop()) {
             return "⊤";
         }
+        // Bottom
         if (this.isBottom()) {
             return "⊥";
         }
         final StringBuilder builder = new StringBuilder("[");
 
-        // [z -> {(y, x, 20, 4), (y, /, 0, 14)}, y -> {(x, z, 3, 1)}]
-
-        for (final Entry<@NotNull Variable, @NotNull Set<@NotNull Constraint>> otherElements : this.domainElements.entrySet()) {
-            builder.append(otherElements.getKey()).append(" → {");
-
-            for (final Constraint constraints : otherElements.getValue()) {
+        // Loop over the tracked constrains
+        for (final Entry<@NotNull Variable,
+                @Unmodifiable @NotNull Set<@NotNull Constraint>> elements :
+                this.trackedConstraints.entrySet()) {
+            builder.append(elements.getKey()).append(" → {");
+            // Append all the constraints
+            for (final Constraint constraints : elements.getValue()) {
                 builder.append(constraints).append(", ");
             }
-            if (!otherElements.getValue().isEmpty()) {
+            // Delete the last comma if present
+            if (!elements.getValue().isEmpty()) {
                 builder.delete(builder.length() - 2, builder.length());
             }
+            // Insert a new line
+            //noinspection HardcodedLineSeparator
             builder.append("},\n");
         }
+        // Delete the last comma if present
         if (builder.length() > 1) {
             builder.delete(builder.length() - 2, builder.length());
         }
+        // Create the representation
         return builder.append(']').toString();
     }
-    /*
-    private List<FullConstraint> computeNewConstraints(
-        @NotNull final Variable x,
-        @NotNull final Variable y,
-        @Nullable final Variable z,
-        final int k1,
-        final int k2
-    ) {
-        final List<FullConstraint> result = new LinkedList<>();
-
-        if (k1 == -1) {
-            if (z == null) {
-                result.add(new FullConstraint(y, x, null, -1, k2));
-            } else {
-                result.add(new FullConstraint(y, x, z, -1, k2));
-                result.add(new FullConstraint(z, x, y, -1, k2));
-            }
-        }
-        if (z == null) {
-            final Set<Constraint> yConstraints = this.domainElements.get(y);
-            if (yConstraints != null) {
-                for (final Constraint yConstraint : yConstraints) {
-                    result.add(
-                        new FullConstraint(
-                            x,
-                            yConstraint.getY(),
-                            yConstraint.getZ(),
-                            k1 * yConstraint.getK2(),
-                            k2 + (k1 * yConstraint.getK2())
-                        )
-                    );
-                }
-            }
-        } else {
-            final Set<Constraint> yConstraints = this.domainElements.get(y);
-            final Set<Constraint> zConstraints = this.domainElements.get(z);
-            if ((yConstraints != null) && (zConstraints != null)) {
-                for (final Constraint yConstraint : yConstraints) {
-                    for (final Constraint zConstraint : zConstraints) {
-                        if (
-                            yConstraint.getY().equals(zConstraint.getY()) &&
-                            Objects.equals(yConstraint.getZ(), zConstraint.getZ())
-                        ) {
-                            result.add(
-                                new FullConstraint(
-                                    x,
-                                    yConstraint.getY(),
-                                    yConstraint.getZ(),
-                                    k1 * (yConstraint.getK1() + zConstraint.getK1()),
-                                    (k1 * yConstraint.getK2()) + (k1 * zConstraint.getK2()) + k2
-                                )
-                            );
-                        } else if (
-                            !yConstraint.getY().equals(zConstraint.getY()) &&
-                            (yConstraint.getZ() == null) &&
-                            (zConstraint.getZ() != null) &&
-                            (yConstraint.getK1() == zConstraint.getK1())
-                        ) {
-                            result.add(
-                                new FullConstraint(
-                                    x,
-                                    yConstraint.getY(),
-                                    zConstraint.getY(),
-                                    k1 * yConstraint.getK1(),
-                                    (k1 * yConstraint.getK2()) + (k1 * zConstraint.getK2()) + k2
-                                )
-                            );
-                        }
-                    }
-                }
-            }
-        }
-
-        return result;
-    }*/
 }
